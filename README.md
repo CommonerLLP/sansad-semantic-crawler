@@ -24,8 +24,8 @@ public-interest research; commercial use is not permitted (see
 - Extracts text from PDFs with `pdftotext -layout` (preferred for
   layout-heavy parliamentary tables), falling back to `pdfminer.six`
   when `pdftotext` is unavailable.
-- Tags every record against the topic profile's regex rules and emits a
-  per-rule match count + score.
+- Classifies every record with one of four modes: deterministic regex
+  rules, embedding-anchor similarity, LLM JSON tagging, or an ensemble.
 - Exports a reusable summary as JSON or as a browser-ready
   `window.<NAME>` JS file for static sites.
 
@@ -37,6 +37,9 @@ pip install sansad-semantic-crawler
 # Optional extras:
 pip install "sansad-semantic-crawler[http]"   # use `requests` instead of stdlib `urllib`
 pip install "sansad-semantic-crawler[pdf]"    # pdfminer.six fallback
+pip install "sansad-semantic-crawler[embeddings]"  # Sentence Transformers models
+pip install "sansad-semantic-crawler[llm]"     # local chat-completions model-server tagging
+pip install "sansad-semantic-crawler[all]"     # all optional integrations
 ```
 
 There are zero required third-party dependencies. The crawler runs on a
@@ -78,6 +81,22 @@ python -m sansad_semantic_crawler export \
 After install, the same commands are also available via the
 `sansad-crawl` console script.
 
+## Integration smoke tests
+
+The repo includes a tiny checked-in smoke corpus and profiles for all
+classifier families:
+
+- `examples/corpora/smoke/manifest.jsonl`
+- `examples/topics/libraries.json` for regex
+- `examples/topics/libraries_embeddings.json` for a real Sentence
+  Transformers model
+- `examples/topics/libraries_llm_ollama.json` for a real local Ollama
+  model through its chat-completions API
+
+See [`docs/INTEGRATION_SMOKE.md`](docs/INTEGRATION_SMOKE.md) for the
+exact commands and expected outputs. Keep those checks manual; they
+download model weights and require local services.
+
 ## Topic profiles
 
 Profiles are plain JSON files. A minimal profile:
@@ -105,9 +124,93 @@ Profiles are plain JSON files. A minimal profile:
 `search_groups` controls what the APIs are queried for.
 `lok_sabha_ministries` / `rajya_sabha_ministry_likes` add ministry
 filters on each house's API.
-`tag_rules` controls what is kept, labelled, scored, and exported.
-A `weight` field on a rule scales its contribution to the per-record
-score.
+`tag_rules` controls the default regex classifier. A `weight` field on
+a rule scales its contribution to the per-record score. Existing v0.1
+profiles that omit `classifier` continue to use regex mode.
+
+Profiles may also choose an explicit classifier:
+
+```json
+{
+  "classifier": {
+    "mode": "embeddings",
+    "embedding_model": "BAAI/bge-m3",
+    "anchors": {
+      "public_library": ["public library", "district public library"],
+      "digital_library": ["digital library", "National Digital Library"]
+    },
+    "threshold": 0.55,
+    "device": "auto"
+  }
+}
+```
+
+```json
+{
+  "classifier": {
+    "mode": "llm",
+    "endpoint": "http://localhost:11434/v1",
+    "api_key": "ollama",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "temperature": 0,
+    "tag_definitions": {
+      "public_library": "Questions about publicly funded public libraries.",
+      "digital_library": "Questions about digital library infrastructure."
+    }
+  }
+}
+```
+
+```json
+{
+  "classifier": {
+    "mode": "ensemble",
+    "combine": "union",
+    "members": [
+      {"mode": "regex"},
+      {
+        "mode": "embeddings",
+        "embedding_model": "BAAI/bge-m3",
+        "anchors": {"public_library": ["public library"]}
+      }
+    ]
+  }
+}
+```
+
+The CLI can override the profile for quick comparisons:
+
+```bash
+python -m sansad_semantic_crawler parse \
+  --topic examples/topics/libraries.json \
+  --out data/libraries \
+  --classifier regex
+```
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the classifier contract.
+
+## Open model menu
+
+The package never ships model weights. For embeddings, documented
+open-weight defaults are:
+
+- `BAAI/bge-m3` — MIT; multilingual, long-context default for serious
+  retrieval-style classification.
+- `intfloat/multilingual-e5-large-instruct` — MIT; instruction-tuned
+  multilingual embeddings.
+- `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` —
+  Apache 2.0; small, fast prototype baseline.
+
+For LLM JSON tagging through a local chat-completions endpoint:
+
+- `mistralai/Mistral-7B-Instruct-v0.3` — Apache 2.0.
+- `Qwen/Qwen2.5-7B-Instruct` — Apache 2.0.
+- `microsoft/Phi-3.5-mini-instruct` — MIT.
+- `allenai/OLMo-2-1124-7B-Instruct` — Apache 2.0; note the model
+  card's additional terms note before using it in redistributed work.
+
+Restricted-license families such as Llama and Gemma can work through the
+generic endpoint, but they are not project defaults.
 
 This repository ships **one example profile** —
 [`examples/topics/libraries.json`](examples/topics/libraries.json) —
@@ -166,22 +269,24 @@ python -m sansad_semantic_crawler export --help
    `examples/topics/libraries.json` and editing the search groups +
    tag rules.
 3. Run a capped dry crawl (`--max-buckets 1 --max-records 5`).
-4. Inspect `manifest.jsonl`. Tighten the topic regex if recall or
-   precision look off.
+4. Inspect `manifest.jsonl`. Tighten the topic regex or classifier
+   anchors/definitions if recall or precision look off.
 5. Run a full crawl (with `--max-records` removed) and let the
    resume-key logic dedupe.
 6. Run `parse` then `export` into the host project.
 
 ## Status and roadmap
 
-This is the **0.1.0** release: a stable, useful slice of what the
-crawler is becoming. Planned for later releases:
+This is the **0.2.0** release: the crawler now supports regex,
+embeddings, LLM, and ensemble classifiers behind one topic-profile
+contract. Planned for later releases:
 
 - Cover **standing-committee reports** (`prsindia.org`,
   `parliamentwatchindia` style) under the same topic-profile contract.
 - A **resume-with-date-floor** mode for incremental backfills.
 - A small `evaluate` command that scores precision / recall against a
   hand-labelled gold set.
+- Optional vector-store export for semantic retrieval workflows.
 
 If you're using the crawler and would like a particular extension,
 open an issue at the [repository](https://github.com/CommonSenseLLP/sansad-semantic-crawler/issues).
