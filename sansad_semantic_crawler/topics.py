@@ -1,21 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Pattern
+from typing import Any
 
-
-@dataclass(frozen=True)
-class TagRule:
-    tag: str
-    label: str
-    patterns: tuple[Pattern[str], ...]
-    weight: float = 1.0
-
-    def count(self, text: str) -> int:
-        return sum(len(pattern.findall(text)) for pattern in self.patterns)
+from .classifiers import Classifier, TagRule, build_classifier
+from .classifiers.regex import build_tag_rules
 
 
 @dataclass(frozen=True)
@@ -26,11 +17,15 @@ class TopicProfile:
     lok_sabha_ministries: list[str]
     rajya_sabha_ministry_likes: list[str]
     tag_rules: tuple[TagRule, ...]
+    classifier: Classifier
+    classifier_config: dict[str, Any]
     fallback_tag: str = "topic_match"
 
     @property
     def tag_labels(self) -> dict[str, str]:
         labels = {rule.tag: rule.label for rule in self.tag_rules}
+        for tag in _classifier_tags(self.classifier_config):
+            labels.setdefault(tag, tag.replace("_", " ").title())
         labels.setdefault(self.fallback_tag, self.fallback_tag.replace("_", " ").title())
         return labels
 
@@ -41,44 +36,37 @@ class TopicProfile:
         return pairs[:max_buckets] if max_buckets is not None else pairs
 
     def classify(self, *parts: str | None) -> dict:
-        blob = " ".join(part for part in parts if part)
-        tags: list[str] = []
-        matches: dict[str, int] = {}
-        score = 0.0
-        for rule in self.tag_rules:
-            n = rule.count(blob)
-            if n:
-                tags.append(rule.tag)
-                matches[rule.tag] = n
-                score += n * rule.weight
-        if not tags and blob.strip():
-            tags.append(self.fallback_tag)
-        return {
-            "tags": sorted(set(tags)),
-            "matches": matches,
-            "score": round(score, 3),
-        }
+        return self.classifier.classify(*parts).to_dict()
 
 
-def load_topic(path: str | Path) -> TopicProfile:
+def load_topic(path: str | Path, *, classifier_override: str | None = None) -> TopicProfile:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    rules = []
-    for item in raw.get("tag_rules", []):
-        rules.append(
-            TagRule(
-                tag=item["tag"],
-                label=item.get("label") or item["tag"].replace("_", " ").title(),
-                patterns=tuple(re.compile(p, re.I | re.DOTALL) for p in item.get("patterns", [])),
-                weight=float(item.get("weight", 1.0)),
-            )
-        )
+    tag_rules = build_tag_rules(raw.get("tag_rules", []))
+    fallback_tag = raw.get("fallback_tag", "topic_match")
+    classifier_config = dict(raw.get("classifier") or {})
+    classifier = build_classifier(
+        classifier_config,
+        tag_rules=tag_rules,
+        fallback_tag=fallback_tag,
+        override=classifier_override,
+    )
     return TopicProfile(
         name=raw["name"],
         description=raw.get("description", ""),
         search_groups={k: list(v) for k, v in raw.get("search_groups", {}).items()},
         lok_sabha_ministries=list(raw.get("lok_sabha_ministries", [])),
         rajya_sabha_ministry_likes=list(raw.get("rajya_sabha_ministry_likes", [])),
-        tag_rules=tuple(rules),
-        fallback_tag=raw.get("fallback_tag", "topic_match"),
+        tag_rules=tag_rules,
+        classifier=classifier,
+        classifier_config=classifier_config,
+        fallback_tag=fallback_tag,
     )
 
+
+def _classifier_tags(config: dict[str, Any]) -> set[str]:
+    tags = set((config.get("anchors") or {}).keys())
+    tags.update((config.get("tag_definitions") or {}).keys())
+    for member in config.get("members", []):
+        if isinstance(member, dict):
+            tags.update(_classifier_tags(member))
+    return tags

@@ -24,7 +24,7 @@ def parse_session_range(value: str) -> list[int]:
 
 
 def crawl_cmd(args: argparse.Namespace) -> None:
-    topic = load_topic(args.topic)
+    topic = load_topic(args.topic, classifier_override=args.classifier)
     out = Path(args.out)
     if args.reset and (out / "manifest.jsonl").exists():
         (out / "manifest.jsonl").unlink()
@@ -59,13 +59,13 @@ def crawl_cmd(args: argparse.Namespace) -> None:
 
 
 def parse_cmd(args: argparse.Namespace) -> None:
-    topic = load_topic(args.topic)
+    topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
     print(f"wrote analysis records={len(rows)}")
 
 
 def export_cmd(args: argparse.Namespace) -> None:
-    topic = load_topic(args.topic)
+    topic = load_topic(args.topic, classifier_override=args.classifier)
     out = Path(args.out)
     data = build_summary(topic, out, max_questions=args.max_questions)
     export_path = Path(args.export_path) if args.export_path else out / ("summary.js" if args.format == "js" else "summary.json")
@@ -79,6 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     crawl = sub.add_parser("crawl")
     crawl.add_argument("--topic", required=True, help="Path to topic profile JSON")
+    crawl.add_argument("--classifier", choices=["regex", "embeddings", "llm", "ensemble"], help="Override profile classifier mode")
     crawl.add_argument("--out", required=True, help="Output corpus directory")
     crawl.add_argument("--house", choices=["both", "ls", "rs"], default="both")
     crawl.add_argument("--from-date")
@@ -94,12 +95,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     parse = sub.add_parser("parse")
     parse.add_argument("--topic", required=True)
+    parse.add_argument("--classifier", choices=["regex", "embeddings", "llm", "ensemble"], help="Override profile classifier mode")
     parse.add_argument("--out", required=True)
     parse.add_argument("--refresh-text", action="store_true")
     parse.set_defaults(func=parse_cmd)
 
     export = sub.add_parser("export")
     export.add_argument("--topic", required=True)
+    export.add_argument("--classifier", choices=["regex", "embeddings", "llm", "ensemble"], help="Override profile classifier mode")
     export.add_argument("--out", required=True)
     export.add_argument("--format", choices=["json", "js"], default="json")
     export.add_argument("--export-path")
@@ -114,4 +117,3 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     args.func(args)
-

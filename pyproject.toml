@@ -1,6 +1,6 @@
 [project]
 name = "sansad-semantic-crawler"
-version = "0.1.0"
+version = "0.2.0"
 description = "Config-driven semantic crawler for Indian Parliament (Lok Sabha + Rajya Sabha) questions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +30,15 @@ dependencies = []
 [project.optional-dependencies]
 pdf = ["pdfminer.six>=20231228"]
 http = ["requests>=2.31.0"]
+embeddings = ["numpy>=1.24", "sentence-transformers>=3.0", "torch>=2.0"]
+llm = []
+all = [
+  "numpy>=1.24",
+  "pdfminer.six>=20231228",
+  "requests>=2.31.0",
+  "sentence-transformers>=3.0",
+  "torch>=2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/CommonSenseLLP/sansad-semantic-crawler"
@@ -41,4 +50,3 @@ sansad-crawl = "sansad_semantic_crawler.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

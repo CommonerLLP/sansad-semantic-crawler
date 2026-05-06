@@ -114,12 +114,18 @@ def parse_corpus(topic: TopicProfile, out_dir: Path, *, refresh_text: bool = Fal
             rec.get("found_via_query"),
             text,
         )
+        semantic_meta = {
+            key: value
+            for key, value in semantic.items()
+            if key not in {"tags", "matches", "score"}
+        }
         analysis.append(
             {
                 **rec,
                 "tags": semantic["tags"],
                 "matches": semantic["matches"],
                 "score": semantic["score"],
+                **semantic_meta,
                 "text_len": len(text),
                 "excerpt": excerpt(text or clean_htmlish(rec.get("title"))),
             }

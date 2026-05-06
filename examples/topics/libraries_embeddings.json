@@ -1,0 +1,25 @@
+{
+  "name": "libraries-embeddings",
+  "description": "Embedding-anchor classifier smoke profile for public and digital library questions.",
+  "search_groups": {
+    "libraries": ["public library", "digital library"]
+  },
+  "classifier": {
+    "mode": "embeddings",
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "anchors": {
+      "public_library": [
+        "public library",
+        "district public library",
+        "community library"
+      ],
+      "digital_library": [
+        "digital library",
+        "National Digital Library",
+        "library digitisation"
+      ]
+    },
+    "threshold": 0.35,
+    "device": "cpu"
+  }
+}
