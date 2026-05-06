@@ -1,0 +1,119 @@
+{
+  "name": "libraries",
+  "description": "Public, institutional, digital, and access-oriented library questions in Parliament.",
+  "search_groups": {
+    "public_libraries": [
+      "public library",
+      "public libraries",
+      "community library",
+      "rural library",
+      "village library",
+      "district library",
+      "state central library",
+      "children library",
+      "mobile library"
+    ],
+    "policy_funding": [
+      "Raja Rammohun Roy Library Foundation",
+      "RRRLF",
+      "National Mission on Libraries",
+      "library grant",
+      "library cess",
+      "library act",
+      "library policy"
+    ],
+    "institutional": [
+      "university library",
+      "school library",
+      "college library",
+      "digital library",
+      "National Digital Library",
+      "library automation",
+      "library digitisation",
+      "library digitization"
+    ],
+    "inclusion_access": [
+      "library for disabled",
+      "braille library",
+      "reading room",
+      "book bank",
+      "tribal library",
+      "minority library"
+    ]
+  },
+  "lok_sabha_ministries": [
+    "CULTURE",
+    "EDUCATION",
+    "HUMAN RESOURCE DEVELOPMENT",
+    "INFORMATION AND BROADCASTING",
+    "SOCIAL JUSTICE AND EMPOWERMENT",
+    "TRIBAL AFFAIRS",
+    "MINORITY AFFAIRS",
+    "RURAL DEVELOPMENT",
+    "PANCHAYATI RAJ"
+  ],
+  "rajya_sabha_ministry_likes": [
+    "CULTURE",
+    "EDUCATION",
+    "HUMAN RESOURCE DEVELOPMENT",
+    "INFORMATION AND BROADCASTING",
+    "SOCIAL JUSTICE",
+    "TRIBAL AFFAIRS",
+    "MINORITY AFFAIRS",
+    "RURAL DEVELOPMENT",
+    "PANCHAYATI RAJ"
+  ],
+  "fallback_tag": "library_match",
+  "tag_rules": [
+    {
+      "tag": "rrrlf",
+      "label": "RRRLF",
+      "weight": 4,
+      "patterns": ["\\bRRRLF\\b", "Raja\\s+Rammohun\\s+Roy\\s+Library\\s+Foundation"]
+    },
+    {
+      "tag": "nml",
+      "label": "National Mission on Libraries",
+      "weight": 4,
+      "patterns": ["National\\s+Mission\\s+on\\s+Libraries", "\\bNML\\b"]
+    },
+    {
+      "tag": "library_act",
+      "label": "Library Acts / policy",
+      "weight": 3,
+      "patterns": ["library\\s+act", "library\\s+cess", "library\\s+policy"]
+    },
+    {
+      "tag": "public_library",
+      "label": "Public libraries",
+      "weight": 2,
+      "patterns": ["public\\s+librar", "community\\s+librar", "rural\\s+librar", "village\\s+librar", "district\\s+librar", "state\\s+central\\s+librar", "mobile\\s+librar"]
+    },
+    {
+      "tag": "digital_library",
+      "label": "Digital libraries",
+      "weight": 2,
+      "patterns": ["digital\\s+librar", "National\\s+Digital\\s+Library", "librar.{0,80}digitisation", "digitisation.{0,80}librar", "librar.{0,80}digitization", "digitization.{0,80}librar", "library\\s+automation"]
+    },
+    {
+      "tag": "school_library",
+      "label": "School libraries",
+      "patterns": ["school\\s+librar"]
+    },
+    {
+      "tag": "university_library",
+      "label": "University / college libraries",
+      "patterns": ["university\\s+librar", "college\\s+librar"]
+    },
+    {
+      "tag": "accessibility",
+      "label": "Access / disability",
+      "patterns": ["librar.{0,80}(disabled|disability|\\bPwD\\b|\\bPwBD\\b|braille|accessible)", "(disabled|disability|\\bPwD\\b|\\bPwBD\\b|braille|accessible).{0,80}librar", "reading\\s+room.{0,80}(disabled|disability|braille|accessible)", "book\\s+bank.{0,80}(disabled|disability|braille|accessible)"]
+    },
+    {
+      "tag": "reading_room",
+      "label": "Reading rooms",
+      "patterns": ["reading\\s+room"]
+    }
+  ]
+}

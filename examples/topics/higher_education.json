@@ -1,0 +1,22 @@
+{
+  "name": "higher_education_faculty",
+  "description": "Faculty vacancy, reservation, and recruitment questions in centrally funded higher education.",
+  "search_groups": {
+    "vacancy": ["faculty vacancy", "vacant teaching posts", "teaching posts vacant", "backlog vacancies teachers"],
+    "reservation": ["SC ST OBC faculty", "reserved category vacancy", "reservation roster", "EWS faculty reservation", "PwBD faculty"],
+    "institutions": ["IIT faculty", "IIM faculty", "NIT faculty", "Central University faculty"],
+    "recruitment": ["Mission Mode recruitment", "Rozgar Mela faculty", "ad hoc teachers", "de-reservation faculty posts"]
+  },
+  "lok_sabha_ministries": ["EDUCATION", "HUMAN RESOURCE DEVELOPMENT", "HEALTH AND FAMILY WELFARE"],
+  "rajya_sabha_ministry_likes": ["EDUCATION", "HUMAN RESOURCE DEVELOPMENT", "HEALTH AND FAMILY WELFARE"],
+  "fallback_tag": "higher_ed_match",
+  "tag_rules": [
+    {"tag": "faculty_vacancy", "label": "Faculty vacancy", "weight": 3, "patterns": ["faculty\\s+vacanc", "vacant\\s+(teaching|faculty)", "teaching\\s+post"]},
+    {"tag": "reservation", "label": "Reservation", "weight": 3, "patterns": ["reservation", "reserved\\s+categor", "\\bSC\\b", "\\bST\\b", "\\bOBC\\b", "\\bEWS\\b", "\\bPwBD\\b", "\\bPwD\\b"]},
+    {"tag": "mission_mode", "label": "Mission Mode", "patterns": ["Mission\\s+Mode", "Rozgar\\s+Mela", "recruitment\\s+drive"]},
+    {"tag": "institution", "label": "Institution-specific", "patterns": ["\\bIIT\\b", "\\bIIM\\b", "\\bNIT\\b", "\\bIIIT\\b", "central\\s+universit", "\\bAIIMS\\b"]},
+    {"tag": "ad_hoc", "label": "Ad hoc / contract", "patterns": ["ad[\\s-]?hoc", "contract\\s+faculty"]},
+    {"tag": "dereservation", "label": "De-reservation / NFS", "patterns": ["de[-\\s]?reservation", "no\\s+suitable\\s+candidate", "\\bNFS\\b"]}
+  ]
+}
+

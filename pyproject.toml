@@ -1,0 +1,19 @@
+[project]
+name = "sansad-semantic-crawler"
+version = "0.1.0"
+description = "Config-driven semantic crawler for Indian Parliament questions"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Free Libraries for All" }]
+dependencies = []
+
+[project.optional-dependencies]
+pdf = ["pdfminer.six>=20231228"]
+http = ["requests>=2.31.0"]
+
+[project.scripts]
+sansad-crawl = "sansad_semantic_crawler.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
