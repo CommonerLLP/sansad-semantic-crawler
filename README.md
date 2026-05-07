@@ -31,16 +31,29 @@ public-interest research; commercial use is not permitted (see
 
 ## Install
 
-```bash
-pip install sansad-semantic-crawler
+The package is not on PyPI yet (publication is planned for a future
+release). Install directly from the GitHub release tag:
 
-# Optional extras:
-pip install "sansad-semantic-crawler[http]"   # use `requests` instead of stdlib `urllib`
-pip install "sansad-semantic-crawler[pdf]"    # pdfminer.six fallback
-pip install "sansad-semantic-crawler[embeddings]"  # Sentence Transformers models
-pip install "sansad-semantic-crawler[llm]"     # local chat-completions model-server tagging
-pip install "sansad-semantic-crawler[all]"     # all optional integrations
+```bash
+pip install "sansad-semantic-crawler @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"
+
+# Optional extras (pick what you need):
+pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"           # use `requests` instead of stdlib `urllib`
+pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"            # pdfminer.six fallback
+pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"     # Sentence Transformers models
+pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"            # local chat-completions model-server tagging
+pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0"            # all optional integrations
 ```
+
+For a project, pin the same line in your `requirements.txt`:
+
+```text
+sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonSenseLLP/sansad-semantic-crawler.git@v0.2.0
+```
+
+Once PyPI publication lands, `pip install sansad-semantic-crawler` will
+work as the simpler form. Existing pinned `git+https://` lines will
+keep working indefinitely.
 
 There are zero required third-party dependencies. The crawler runs on a
 clean Python 3.10+ install and falls back to `urllib` for HTTP and to
@@ -299,6 +312,31 @@ Source-available and modifiable for research, education, journalism,
 public-interest work, and personal use. **Commercial use is not
 permitted under any circumstance.** The full canonical licence text is
 in [`LICENSE`](./LICENSE) at the repository root.
+
+### Why PolyForm Noncommercial?
+
+This package was built as a public-interest research tool — the kind of
+work that ought to be freely available to academics, journalists, and
+civil-society projects, but should not be quietly absorbed into the
+revenue base of a commercial intelligence product without conversation.
+PolyForm Noncommercial is the cleanest off-the-shelf license for that
+posture: explicit "yes" for non-commercial use; explicit "no" for
+commercial use; no field-of-use carve-outs to litigate.
+
+Concretely:
+
+- **Researchers, students, journalists, and public-interest projects:**
+  use it freely, including modification and redistribution. Citation is
+  appreciated; see `CITATION.cff`.
+- **Commercial entities** (any for-profit organisation, including the
+  internal tooling of one): the licence does not grant you use rights.
+  If you have a use case that arguably sits in a grey area, contact the
+  maintainer and we will sort it out — typically yes for genuinely
+  public-interest carve-outs inside commercial orgs (e.g. a newsroom
+  inside a for-profit publisher), no for product features.
+
+If you need a commercial license, open an issue marked
+`[license inquiry]` and we will respond.
 
 ## Citation
 
