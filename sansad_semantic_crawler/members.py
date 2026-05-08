@@ -96,6 +96,10 @@ class MPRoster:
         words = sorted([w for w in s.split() if w])
         return " ".join(words)
 
+    def iter_members(self) -> "list[MemberInfo]":
+        """Public iterator over members. Used by entity-store adapters."""
+        return list(self._roster.values())
+
     def lookup(self, name: str) -> MemberInfo | None:
         """Find a member by exact or normalized name."""
         if not name:

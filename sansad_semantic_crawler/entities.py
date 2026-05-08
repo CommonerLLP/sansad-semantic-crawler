@@ -366,3 +366,76 @@ class EntityStore:
             norm = normalize_name(nm)
             if norm:
                 self._by_norm.setdefault(norm, set()).add(person.entity_id)
+
+
+# ----------------------------------------------------------------------
+# Adapters: translate other in-memory data sources into entity rows.
+# Duck-typed; no imports of the source modules to avoid circular deps.
+# ----------------------------------------------------------------------
+
+
+def _house_short(house_long: str | None) -> str:
+    """Map sansad.in's house labels ('Lok Sabha' / 'Rajya Sabha') to short form."""
+    if not house_long:
+        return ""
+    h = house_long.lower()
+    if h.startswith("lok"):
+        return "ls"
+    if h.startswith("raj"):
+        return "rs"
+    return h
+
+
+def populate_entity_store_from_mp_roster(
+    roster, store: EntityStore, *, ls_term: int = 18
+) -> tuple[int, int]:
+    """Translate an ``MPRoster``'s in-memory members into entity records.
+
+    Returns ``(people_added, memberships_added)`` for telemetry. Idempotent:
+    re-running with the same roster is a no-op.
+
+    The roster is duck-typed via ``iter_members()`` so this function does not
+    import ``MPRoster`` directly. Tests can pass in any object with a
+    compatible iterator yielding objects with ``name``, ``party``,
+    ``party_name``, ``state``, ``house`` attributes.
+
+    LS members are stamped with ``term=ls_term`` (default 18). RS members
+    leave ``term=None`` because RS does not have term numbers; individual
+    elected terms are tracked in ``start``/``end`` when known.
+    """
+    people_before = len(store.people)
+    memberships_before = len(store.mp_memberships)
+
+    for info in roster.iter_members():
+        name = (info.name or "").strip()
+        if not name:
+            continue
+        party = (info.party or "").strip()
+        party_name = (info.party_name or "").strip()
+        state = (info.state or None)
+        house = _house_short(info.house)
+
+        # entity_id seed: canonical_name + house + party. Stable across reruns.
+        eid = make_entity_id(name, house, party)
+        store.add_person(
+            Person(
+                entity_id=eid,
+                canonical_name=name,
+                primary_kind="politician",
+            )
+        )
+        store.add_mp_membership(
+            MpMembership(
+                entity_id=eid,
+                house=house,
+                term=(ls_term if house == "ls" else None),
+                party=party,
+                party_name=party_name,
+                state=state,
+            )
+        )
+
+    return (
+        len(store.people) - people_before,
+        len(store.mp_memberships) - memberships_before,
+    )
