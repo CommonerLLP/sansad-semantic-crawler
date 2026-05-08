@@ -30,6 +30,31 @@ def parse_session_range(value: str) -> list[int]:
     return sorted(set(out))
 
 
+def _build_resolver_if_requested(out_dir: Path, with_entities: bool, log):
+    """Lazy-import to keep the CLI cold-start cheap when --with-entities is off."""
+    if not with_entities:
+        return None
+    from .entities import EntityStore, populate_entity_store_from_mp_roster
+    from .members import MPRoster
+    from .resolver import Resolver
+    store = EntityStore(out_dir)
+    store.load()
+    if not store.people:
+        log("Entity store empty — fetching MP roster from sansad.in...")
+        roster = MPRoster()
+        try:
+            roster.load_ls()
+            roster.load_rs()
+        except Exception as exc:  # noqa: BLE001
+            log(f"Warning: MP roster fetch failed: {exc}; resolver will return 'unknown' for askers.")
+        people_added, memberships_added = populate_entity_store_from_mp_roster(roster, store)
+        log(f"Populated entity store: {people_added} people, {memberships_added} memberships.")
+        store.save()
+    else:
+        log(f"Loaded existing entity store: {len(store.people)} people.")
+    return Resolver(store)
+
+
 def crawl_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     out = Path(args.out)
@@ -38,12 +63,15 @@ def crawl_cmd(args: argparse.Namespace) -> None:
     if args.reset and (out / "crawl.log").exists():
         (out / "crawl.log").unlink()
     effective_mode = args.classifier or topic.classifier_config.get("mode") or "regex"
+    out.mkdir(parents=True, exist_ok=True)
+    resolver = _build_resolver_if_requested(out, getattr(args, "with_entities", False), print)
     crawler = SansadCrawler(
         topic,
         out,
         sleep=args.sleep,
         topic_path=args.topic,
         classifier_mode=effective_mode,
+        resolver=resolver,
     )
     seen = crawler.load_seen()
     crawler.log(f"resume seen={len(seen)} topic={topic.name} download={not args.no_download}")
@@ -154,6 +182,17 @@ def build_parser() -> argparse.ArgumentParser:
     crawl.add_argument("--sleep", type=float, default=0.25)
     crawl.add_argument("--no-download", action="store_true")
     crawl.add_argument("--reset", action="store_true")
+    crawl.add_argument(
+        "--with-entities",
+        action="store_true",
+        help=(
+            "Resolve asker names to stable entity_ids. First run fetches MP "
+            "rosters from sansad.in and populates entities/people.jsonl + "
+            "entities/mp_memberships.jsonl; subsequent runs reuse the local "
+            "store. Without this flag, asker_entity_ids on every record are "
+            "all None (schema commitment intact, resolution skipped)."
+        ),
+    )
     crawl.set_defaults(func=crawl_cmd)
 
     cc = sub.add_parser("crawl-committees", help="Crawl standing-committee reports")

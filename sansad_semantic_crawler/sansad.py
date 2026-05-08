@@ -73,6 +73,7 @@ class SansadCrawler(BaseCrawler):
         sleep: float = 0.25,
         topic_path: Path | str | None = None,
         classifier_mode: str = "regex",
+        resolver=None,
     ):
         super().__init__(
             topic,
@@ -80,6 +81,7 @@ class SansadCrawler(BaseCrawler):
             sleep=sleep,
             topic_path=topic_path,
             classifier_mode=classifier_mode,
+            resolver=resolver,
         )
         self._roster: MPRoster | None = None
 
@@ -99,7 +101,16 @@ class SansadCrawler(BaseCrawler):
         return self._roster
 
     def _enrich_askers(self, rec: dict) -> None:
-        """Add party/house details for each asker if found in the roster."""
+        """Add party/house details (v0.4.0) and stable entity_ids (v0.5.0).
+
+        ``asker_details`` carries party/party_name/house from the in-memory
+        MPRoster — backwards-compatible with v0.4.0 consumers.
+        ``asker_entity_ids`` is the v0.5.0 schema commitment: a parallel list
+        same length as ``askers``, with stable entity_ids when the resolver
+        could match confidently and ``None`` otherwise. Always present on
+        every QA record so consumers can rely on its shape regardless of
+        whether ``--with-entities`` was used.
+        """
         askers = rec.get("askers") or []
         details = []
         for name in askers:
@@ -116,6 +127,11 @@ class SansadCrawler(BaseCrawler):
             else:
                 details.append({"name": name, "party": None})
         rec["asker_details"] = details
+        # v0.5.0 schema: parallel entity_id list, plus null responder fields
+        # reserved for the Phase 1 (answer-text extraction) populator.
+        rec["asker_entity_ids"] = self.resolve_askers(askers)
+        rec.setdefault("responder_entity_id", None)
+        rec.setdefault("responder_role_at_event", None)
 
     def ls_search_page(self, query: str, ministry: str, page: int, size: int = 100) -> dict:
         params = [

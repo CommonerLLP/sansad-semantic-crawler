@@ -10,6 +10,7 @@ from .runlog import RunLog
 
 if TYPE_CHECKING:
     from .http_client import StdlibSession
+    from .resolver import Resolver
     from .topics import TopicProfile
 
 
@@ -28,6 +29,7 @@ class BaseCrawler:
         sleep: float = 0.25,
         topic_path: Path | str | None = None,
         classifier_mode: str = "regex",
+        resolver: "Resolver | None" = None,
     ):
         self.topic = topic
         self.out_dir = out_dir
@@ -39,6 +41,27 @@ class BaseCrawler:
         self.topic_path = topic_path
         self.classifier_mode = classifier_mode
         self.runlog = RunLog(out_dir)
+        # Optional name+context -> entity_id resolver. When None, records
+        # carry ``asker_entity_ids`` lists with null entries — schema
+        # commitment lands either way, populating it requires entity data.
+        self.resolver = resolver
+
+    def resolve_askers(self, names: list[str], context: dict | None = None) -> list[str | None]:
+        """Map a list of asker names to a parallel list of entity_ids.
+
+        Same length as input. Null entries mean ``status != "resolved"`` —
+        unknown name, ambiguous match, or no resolver configured. The
+        record stays honest about the gap; consumers handling weights and
+        cross-session tracking skip null entities cleanly.
+        """
+        out: list[str | None] = []
+        for nm in names or []:
+            if not self.resolver:
+                out.append(None)
+                continue
+            result = self.resolver.resolve(nm, context=context, kind_hint="mp")
+            out.append(result.entity_id if result.status == "resolved" else None)
+        return out
 
     def log(self, msg: str) -> None:
         self.out_dir.mkdir(parents=True, exist_ok=True)
