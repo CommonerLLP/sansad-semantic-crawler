@@ -87,3 +87,43 @@ Expected:
 
 Do not put this Ollama smoke in CI. It is a local/manual integration test
 because it requires a model server and downloads model weights.
+
+## Standing-committee crawler — frozen fixture
+
+`examples/corpora/committees-smoke/` carries a frozen pair of LS/RS
+API responses plus the canonical parser output they should produce.
+`tests/test_smoke_fixture.py` runs the crawler against the frozen
+payloads with a fake session and asserts the manifest matches.
+
+Running it manually:
+
+```bash
+.venv/bin/python -m pytest tests/test_smoke_fixture.py -q
+```
+
+To refresh the fixture after a confirmed upstream change:
+
+```bash
+# 1. Pull the same two URLs again, overwriting the frozen raw files.
+curl -sS \
+  -H 'User-Agent: Mozilla/5.0 sansad-semantic-crawler' \
+  'https://sansad.in/api_ls/committee/lsRSAllReports?house=L&committeeCode=12&lsNo=18&page=1&size=2&sortOn=reportNo&sortBy=desc' \
+  -o examples/corpora/committees-smoke/raw/ls_finance_p1.json
+
+curl -sS \
+  -H 'User-Agent: Mozilla/5.0 sansad-semantic-crawler' \
+  -H 'Referer: https://sansad.in/rs/committees' \
+  'https://sansad.in/api_rs/committee/committee-reports?mstCommId=14&departmentId=&presentationYear=&search=&page=1&size=2&sortOn=reportNo&sortBy=desc&locale=en' \
+  -o examples/corpora/committees-smoke/raw/rs_health_p1.json
+
+# 2. Regenerate the canonical manifest from the fresh payloads.
+SANSAD_REGENERATE_FIXTURE=1 .venv/bin/python -m pytest tests/test_smoke_fixture.py -q
+
+# 3. Inspect both diffs and commit only intentional changes.
+git diff examples/corpora/committees-smoke/
+```
+
+Treat the diff in `manifest.jsonl` as itself audit-relevant: which
+upstream changes flowed through which parser changes is the kind of
+trail Power's *Making Things Auditable* says a tool that calls itself
+"audit-grade" ought to preserve.
