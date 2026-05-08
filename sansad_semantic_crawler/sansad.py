@@ -8,6 +8,7 @@ from typing import Iterable, Iterator
 from urllib.parse import urlencode
 
 from .http_client import make_session
+from .base import BaseCrawler, now
 from .runlog import RunLog
 from .topics import TopicProfile
 
@@ -26,8 +27,6 @@ RS_HEADERS = {
 }
 
 
-def now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
 
 
 def stable_key(house: str, qtype: str | None, qno: str | None, date: str | None) -> str:
@@ -65,7 +64,7 @@ def rs_date_iso(value: str | None) -> str:
         return value[:10]
 
 
-class SansadCrawler:
+class SansadCrawler(BaseCrawler):
     def __init__(
         self,
         topic: TopicProfile,
@@ -75,47 +74,48 @@ class SansadCrawler:
         topic_path: Path | str | None = None,
         classifier_mode: str = "regex",
     ):
-        self.topic = topic
-        self.out_dir = out_dir
-        self.pdf_dir = out_dir / "pdfs"
-        self.manifest = out_dir / "manifest.jsonl"
-        self.log_path = out_dir / "crawl.log"
-        self.sleep = sleep
-        self.session = make_session()
-        # Provenance: each crawl invocation appends to ``_runs.jsonl`` with
-        # the topic-profile content hash + classifier configuration so a
-        # record can be linked back to the apparatus that produced it.
-        # Optional kwargs default safely so legacy callers / tests that
-        # construct ``SansadCrawler(topic, out)`` keep working unchanged.
-        self.topic_path = topic_path
-        self.classifier_mode = classifier_mode
-        self.runlog = RunLog(out_dir)
+        super().__init__(
+            topic,
+            out_dir,
+            sleep=sleep,
+            topic_path=topic_path,
+            classifier_mode=classifier_mode,
+        )
+        self._roster: MPRoster | None = None
 
-    def log(self, msg: str) -> None:
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-        line = f"[{now()}] {msg}"
-        print(line, flush=True)
-        with self.log_path.open("a", encoding="utf-8") as f:
-            f.write(line + "\n")
+    @property
+    def roster(self):
+        """Lazy-loaded MP roster for enrichment."""
+        if self._roster is None:
+            from .members import MPRoster
 
-    def load_seen(self) -> set[str]:
-        seen: set[str] = set()
-        if not self.manifest.exists():
-            return seen
-        with self.manifest.open(encoding="utf-8") as f:
-            for line in f:
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if rec.get("key"):
-                    seen.add(rec["key"])
-        return seen
+            self._roster = MPRoster(self.session)
+            self.log("Fetching MP rosters (LS + RS)...")
+            try:
+                self._roster.load_ls()
+                self._roster.load_rs()
+            except Exception as e:
+                self.log(f"Warning: Failed to load MP rosters: {e}")
+        return self._roster
 
-    def append(self, rec: dict) -> None:
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-        with self.manifest.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    def _enrich_askers(self, rec: dict) -> None:
+        """Add party/house details for each asker if found in the roster."""
+        askers = rec.get("askers") or []
+        details = []
+        for name in askers:
+            info = self.roster.lookup(name)
+            if info:
+                details.append(
+                    {
+                        "name": info.name,
+                        "party": info.party,
+                        "party_name": info.party_name,
+                        "house": info.house,
+                    }
+                )
+            else:
+                details.append({"name": name, "party": None})
+        rec["asker_details"] = details
 
     def ls_search_page(self, query: str, ministry: str, page: int, size: int = 100) -> dict:
         params = [
@@ -258,6 +258,7 @@ class SansadCrawler:
                                     rec["pdf_url"] = pdf_url
                                     rec["pdf_path"] = str(pdf_path.relative_to(self.out_dir))
                         rec.setdefault("language_classified", ["en"])
+                        self._enrich_askers(rec)
                         self.append(rec)
                         seen.add(key)
                         added += 1
@@ -364,6 +365,7 @@ class SansadCrawler:
                         if self.write_pdf(rec["pdf_url"], pdf_path, RS_HEADERS):
                             rec["pdf_path"] = str(pdf_path.relative_to(self.out_dir))
                     rec.setdefault("language_classified", ["en"])
+                    self._enrich_askers(rec)
                     self.append(rec)
                     seen.add(key)
                     added += 1

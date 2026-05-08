@@ -113,6 +113,11 @@ def crawl_committees_cmd(args: argparse.Namespace) -> None:
             max_records=args.max_records,
             download=not args.no_download,
         )
+    if args.crawl_composition:
+        if args.house in ("both", "ls"):
+            crawler.crawl_composition("ls", resolve_committees("ls", requested))
+        if args.house in ("both", "rs"):
+            crawler.crawl_composition("rs", resolve_committees("rs", requested))
     crawler.log(f"DONE added={added} total={len(seen)}")
 
 
@@ -163,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     cc.add_argument("--max-records", type=int, help="Smoke-test brake: stop after N new records per house crawl")
     cc.add_argument("--sleep", type=float, default=0.25)
     cc.add_argument("--no-download", action="store_true")
+    cc.add_argument("--crawl-composition", action="store_true", help="Fetch and save committee member lists")
     cc.add_argument("--reset", action="store_true")
     cc.set_defaults(func=crawl_committees_cmd)
 

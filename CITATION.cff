@@ -22,9 +22,9 @@ keywords:
   - civic-tech
 preferred-citation:
   type: software
-  title: "Sansad Semantic Crawler — a config-driven crawler for Indian parliamentary questions."
+  title: "Sansad Semantic Crawler — reading the Indian parliamentary record(s)."
   authors:
     - name: "Commoner LLP"
   url: "https://github.com/CommonerLLP/sansad-semantic-crawler"
   year: 2026
-  version: "0.2.0"
+  version: "0.4.0"

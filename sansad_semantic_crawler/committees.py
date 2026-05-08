@@ -18,6 +18,7 @@ subjects (English) live in `SubjectOfTheReport` (LS) and
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from datetime import datetime
@@ -26,8 +27,9 @@ from typing import Any, Iterable, Iterator
 from urllib.parse import urlencode
 
 from .http_client import make_session
+from .base import BaseCrawler, now
 from .runlog import RunLog
-from .sansad import date_in_range, now
+from .sansad import date_in_range
 from .topics import TopicProfile
 
 LS_REPORTS_API = "https://sansad.in/api_ls/committee/lsRSAllReports"
@@ -143,12 +145,8 @@ def report_key(house: str, slug: str, report_no: object, ls_no: int | None = Non
     return f"{h}|{slug}|{n}{suffix}"
 
 
-class CommitteeCrawler:
-    """Crawls standing-committee reports. Sibling of `SansadCrawler`.
-
-    NOTE: log/append/load_seen/write_pdf are duplicated from `SansadCrawler`.
-    Factor into a shared base when a third crawler module appears.
-    """
+class CommitteeCrawler(BaseCrawler):
+    """Crawls standing-committee reports. Sibling of `SansadCrawler`."""
 
     def __init__(
         self,
@@ -160,65 +158,120 @@ class CommitteeCrawler:
         topic_path: Path | str | None = None,
         classifier_mode: str = "regex",
     ) -> None:
-        self.topic = topic
-        self.out_dir = out_dir
-        self.pdf_dir = out_dir / "pdfs"
-        self.manifest = out_dir / "manifest.jsonl"
-        self.log_path = out_dir / "crawl.log"
-        self.sleep = sleep
+        super().__init__(
+            topic,
+            out_dir,
+            sleep=sleep,
+            topic_path=topic_path,
+            classifier_mode=classifier_mode,
+        )
         self.lok_sabha_no = lok_sabha_no
-        self.session = make_session()
-        # `topic_path` and `classifier_mode` are recorded by RunLog so that
-        # records can be linked back to the categorical apparatus that
-        # produced them. Optional to avoid breaking tests that build a
-        # `TopicProfile` programmatically.
-        self.topic_path = topic_path
-        self.classifier_mode = classifier_mode
-        self.runlog = RunLog(out_dir)
+        self.composition_manifest = out_dir / "committee_members.jsonl"
 
-    # ---- shared I/O (duplicated from SansadCrawler; factor on third caller) ----
-
-    def log(self, msg: str) -> None:
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-        line = f"[{now()}] {msg}"
-        print(line, flush=True)
-        with self.log_path.open("a", encoding="utf-8") as f:
-            f.write(line + "\n")
-
-    def load_seen(self) -> set[str]:
-        import json
-
-        seen: set[str] = set()
+    def _find_recent_report_pdf(self, house: str, slug: str) -> Path | None:
+        """Look for the most recent PDF for this committee in the manifest."""
         if not self.manifest.exists():
-            return seen
+            return None
+        recent_pdf = None
         with self.manifest.open(encoding="utf-8") as f:
             for line in f:
                 try:
                     rec = json.loads(line)
+                    h_rec = rec.get("house", "").lower()
+                    # Normalize "Lok Sabha" -> "ls", "Rajya Sabha" -> "rs"
+                    h_norm = "ls" if "lok" in h_rec else ("rs" if "rajya" in h_rec else h_rec)
+                    if (
+                        h_norm == house.lower()
+                        and rec.get("committee_slug") == slug
+                    ):
+                        p = rec.get("pdf_path")
+                        if p:
+                            recent_pdf = self.out_dir / p
                 except json.JSONDecodeError:
                     continue
-                if rec.get("key"):
-                    seen.add(rec["key"])
-        return seen
+        return recent_pdf if recent_pdf and recent_pdf.exists() else None
 
-    def append(self, rec: dict) -> None:
-        import json
+    def crawl_composition(self, house: str, committees: Iterable[str]) -> int:
+        """Fetch and save members for each committee with PDF/LLM fallback and party enrichment."""
+        from .extractors import CompositionExtractor
+        from .members import MPRoster, fetch_committee_members
+        from .textparse import extract_pdf_text
 
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        with self.manifest.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        extractor = CompositionExtractor(self.topic.classifier_config)
+        roster = MPRoster(self.session)
+        self.log("Loading global MP roster for party enrichment...")
+        try:
+            roster.load_ls()
+            roster.load_rs()
+        except Exception as e:
+            self.log(f"Warning: Global roster load failed (party info may be missing): {e}")
 
-    def write_pdf(self, url: str, path: Path, headers: dict) -> bool:
-        if path.exists() and path.stat().st_size > 1000:
-            return True
-        path.parent.mkdir(parents=True, exist_ok=True)
-        r = self.session.get(url, headers=headers, timeout=120, stream=True)
-        if r.status_code != 200:
-            return False
-        with path.open("wb") as f:
-            for chunk in r.iter_content(chunk_size=16384):
-                f.write(chunk)
-        return path.exists() and path.stat().st_size > 1000
+        added = 0
+        for slug in committees:
+            mapping = LS_COMMITTEES if house == "ls" else RS_COMMITTEES
+            if slug not in mapping:
+                continue
+            name, code = mapping[slug]
+            self.log(f"Fetching composition for {house.upper()} committee {slug} (code={code})")
+
+            members = []
+            source = "api"
+            try:
+                members = fetch_committee_members(house, code, self.lok_sabha_no)
+            except Exception as e:
+                self.log(f"Warning: API fetch failed for {slug}: {e}")
+
+            if not members:
+                # Fallback to PDF interpretation
+                pdf_path = self._find_recent_report_pdf(house, slug)
+                if pdf_path:
+                    self.log(f"Attempting LLM extraction from {pdf_path.name}...")
+                    text = extract_pdf_text(pdf_path)
+                    members = extractor.extract(text[:15000])
+                    source = f"pdf_llm:{pdf_path.name}"
+                else:
+                    self.log(f"No recent PDF found for {slug}, skipping fallback.")
+
+            if members:
+                # Enrich with party info from global roster
+                enriched_members = []
+                for m in members:
+                    m_name = m.get("name") if isinstance(m, dict) else str(m)
+                    info = roster.lookup(m_name)
+                    if info:
+                        enriched_members.append(
+                            {
+                                "name": info.name,
+                                "party": info.party,
+                                "party_name": info.party_name,
+                                "house": info.house or m.get("house"),
+                                "role": m.get("role", "Member")
+                                if isinstance(m, dict)
+                                else "Member",
+                            }
+                        )
+                    else:
+                        if isinstance(m, dict):
+                            enriched_members.append(m)
+                        else:
+                            enriched_members.append({"name": m, "role": "Member"})
+
+                payload = {
+                    "house": house.upper(),
+                    "committee": slug,
+                    "committee_name": name,
+                    "committee_code": code,
+                    "source": source,
+                    "members": enriched_members,
+                    "crawled_at": now(),
+                }
+                with self.composition_manifest.open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+                added += 1
+                self.log(f"Stored {len(enriched_members)} enriched members for {slug} (via {source})")
+            time.sleep(self.sleep)
+        return added
 
     # ---- LS ----
 
