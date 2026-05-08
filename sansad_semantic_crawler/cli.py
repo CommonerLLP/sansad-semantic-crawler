@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .answers import extract_answers
 from .committees import CommitteeCrawler, resolve_committees
 from .export import build_summary, write_export
 from .sansad import SansadCrawler
@@ -149,6 +150,13 @@ def crawl_committees_cmd(args: argparse.Namespace) -> None:
     crawler.log(f"DONE added={added} total={len(seen)}")
 
 
+def extract_answers_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "manifest.jsonl").exists():
+        raise SystemExit(f"no manifest at {out}/manifest.jsonl — run 'crawl' first")
+    extract_answers(out, refresh=args.refresh, log_fn=print)
+
+
 def parse_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
@@ -210,6 +218,14 @@ def build_parser() -> argparse.ArgumentParser:
     cc.add_argument("--crawl-composition", action="store_true", help="Fetch and save committee member lists")
     cc.add_argument("--reset", action="store_true")
     cc.set_defaults(func=crawl_committees_cmd)
+
+    extract = sub.add_parser(
+        "extract-answers",
+        help="Extract structured (question/answer) and (recommendation/response) pairs from PDFs into answers.jsonl",
+    )
+    extract.add_argument("--out", required=True, help="Corpus directory containing manifest.jsonl + downloaded PDFs")
+    extract.add_argument("--refresh", action="store_true", help="Force re-extraction even if answers.jsonl exists")
+    extract.set_defaults(func=extract_answers_cmd)
 
     parse = sub.add_parser("parse")
     parse.add_argument("--topic", required=True)
