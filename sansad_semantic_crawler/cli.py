@@ -37,7 +37,14 @@ def crawl_cmd(args: argparse.Namespace) -> None:
         (out / "manifest.jsonl").unlink()
     if args.reset and (out / "crawl.log").exists():
         (out / "crawl.log").unlink()
-    crawler = SansadCrawler(topic, out, sleep=args.sleep)
+    effective_mode = args.classifier or topic.classifier_config.get("mode") or "regex"
+    crawler = SansadCrawler(
+        topic,
+        out,
+        sleep=args.sleep,
+        topic_path=args.topic,
+        classifier_mode=effective_mode,
+    )
     seen = crawler.load_seen()
     crawler.log(f"resume seen={len(seen)} topic={topic.name} download={not args.no_download}")
     added = 0

@@ -8,6 +8,7 @@ from typing import Iterable, Iterator
 from urllib.parse import urlencode
 
 from .http_client import make_session
+from .runlog import RunLog
 from .topics import TopicProfile
 
 LS_API_BASE = "https://elibrary.sansad.in/server/api"
@@ -65,7 +66,15 @@ def rs_date_iso(value: str | None) -> str:
 
 
 class SansadCrawler:
-    def __init__(self, topic: TopicProfile, out_dir: Path, *, sleep: float = 0.25):
+    def __init__(
+        self,
+        topic: TopicProfile,
+        out_dir: Path,
+        *,
+        sleep: float = 0.25,
+        topic_path: Path | str | None = None,
+        classifier_mode: str = "regex",
+    ):
         self.topic = topic
         self.out_dir = out_dir
         self.pdf_dir = out_dir / "pdfs"
@@ -73,6 +82,14 @@ class SansadCrawler:
         self.log_path = out_dir / "crawl.log"
         self.sleep = sleep
         self.session = make_session()
+        # Provenance: each crawl invocation appends to ``_runs.jsonl`` with
+        # the topic-profile content hash + classifier configuration so a
+        # record can be linked back to the apparatus that produced it.
+        # Optional kwargs default safely so legacy callers / tests that
+        # construct ``SansadCrawler(topic, out)`` keep working unchanged.
+        self.topic_path = topic_path
+        self.classifier_mode = classifier_mode
+        self.runlog = RunLog(out_dir)
 
     def log(self, msg: str) -> None:
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -178,6 +195,22 @@ class SansadCrawler:
         max_records: int | None,
         download: bool,
     ) -> int:
+        run_id = self.runlog.start(
+            kind="qa",
+            scope={
+                "house": "ls",
+                "from_date": from_date,
+                "to_date": to_date,
+                "limit": limit,
+                "max_buckets": max_buckets,
+                "max_records": max_records,
+                "download": download,
+            },
+            topic_name=self.topic.name,
+            topic_path=self.topic_path,
+            classifier_mode=self.classifier_mode,
+            classifier_config=self.topic.classifier_config,
+        )
         added = 0
         for group, query in self.topic.searches(max_buckets):
             for ministry in self.topic.lok_sabha_ministries:
@@ -196,6 +229,8 @@ class SansadCrawler:
                         semantic = self.topic.classify(title, query)
                         rec = {
                             "key": key,
+                            "run_id": run_id,
+                            "kind": "qa",
                             "house": "Lok Sabha",
                             "uuid": uuid,
                             "handle": item.get("handle"),
@@ -222,14 +257,18 @@ class SansadCrawler:
                                 if self.write_pdf(pdf_url, pdf_path, HEADERS):
                                     rec["pdf_url"] = pdf_url
                                     rec["pdf_path"] = str(pdf_path.relative_to(self.out_dir))
+                        rec.setdefault("language_classified", ["en"])
                         self.append(rec)
                         seen.add(key)
                         added += 1
                         if max_records is not None and added >= max_records:
+                            self.runlog.finish(added=added)
                             return added
                         time.sleep(self.sleep)
                 except Exception as exc:  # noqa: BLE001
                     self.log(f"LS failed query={query!r} ministry={ministry}: {exc}")
+                    self.runlog.record_error(where=f"ls/{ministry}/{query}", exc=exc)
+        self.runlog.finish(added=added)
         return added
 
     def rs_search_session(self, ses_no: int, ministry_like: str) -> list[dict]:
@@ -253,17 +292,36 @@ class SansadCrawler:
         max_records: int | None,
         download: bool,
     ) -> int:
+        sessions_list = list(sessions)
+        run_id = self.runlog.start(
+            kind="qa",
+            scope={
+                "house": "rs",
+                "sessions": sessions_list,
+                "from_date": from_date,
+                "to_date": to_date,
+                "limit": limit,
+                "max_buckets": max_buckets,
+                "max_records": max_records,
+                "download": download,
+            },
+            topic_name=self.topic.name,
+            topic_path=self.topic_path,
+            classifier_mode=self.classifier_mode,
+            classifier_config=self.topic.classifier_config,
+        )
         added = 0
         ministries = self.topic.rajya_sabha_ministry_likes
         if max_buckets is not None:
             ministries = ministries[:max_buckets]
-        for ses_no in sessions:
+        for ses_no in sessions_list:
             for ministry in ministries:
                 self.log(f"RS session={ses_no} ministry_like={ministry}%")
                 try:
                     records = self.rs_search_session(ses_no, ministry)
                 except Exception as exc:  # noqa: BLE001
                     self.log(f"RS failed session={ses_no} ministry={ministry}: {exc}")
+                    self.runlog.record_error(where=f"rs/{ses_no}/{ministry}", exc=exc)
                     continue
                 kept_for_bucket = 0
                 for row in records:
@@ -279,6 +337,8 @@ class SansadCrawler:
                         continue
                     rec = {
                         "key": key,
+                        "run_id": run_id,
+                        "kind": "qa",
                         "house": "Rajya Sabha",
                         "qslno": row.get("qslno"),
                         "ses_no": row.get("ses_no"),
@@ -303,14 +363,17 @@ class SansadCrawler:
                         pdf_path = self.pdf_dir / "rs" / fname
                         if self.write_pdf(rec["pdf_url"], pdf_path, RS_HEADERS):
                             rec["pdf_path"] = str(pdf_path.relative_to(self.out_dir))
+                    rec.setdefault("language_classified", ["en"])
                     self.append(rec)
                     seen.add(key)
                     added += 1
                     kept_for_bucket += 1
                     if max_records is not None and added >= max_records:
+                        self.runlog.finish(added=added)
                         return added
                     if limit is not None and kept_for_bucket >= limit:
                         break
                     time.sleep(self.sleep)
+        self.runlog.finish(added=added)
         return added
 
