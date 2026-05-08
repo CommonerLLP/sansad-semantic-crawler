@@ -286,7 +286,7 @@ generic endpoint, but they are not project defaults.
 This repository ships **one example profile** —
 [`examples/topics/libraries.json`](examples/topics/libraries.json) —
 which is the live profile behind
-[freelibraries4all](https://freelibraries4all.org). Profiles for
+[theright2read](https://theright2read.org). Profiles for
 projects that have a privacy or research-strategy reason to keep their
 analytical lens private (e.g. higher-education vacancy research)
 typically live in the host project's own repository, gitignored or

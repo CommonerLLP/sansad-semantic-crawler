@@ -4,7 +4,7 @@ Thanks for considering a contribution.
 
 This is a small, deliberately scoped public-interest library. The
 codebase optimises for stability over feature breadth: the package is
-used by sister projects ([freelibraries4all](https://github.com/CommonerLLP/freelibraries4all.github.io)
+used by sister projects ([theright2read](https://github.com/CommonerLLP/theright2read.github.io)
 and [academiaindia](https://github.com/CommonerLLP/academiaindia))
 which pin a specific tag and expect the API surface to behave the same
 way for the lifetime of that pin.
@@ -110,7 +110,7 @@ Consumers of this package pin a specific `@v0.X.Y` tag in their
 pinned consumer.** If a backward-incompatible change is genuinely
 necessary, document it in the PR and we will plan a coordinated
 upgrade with the known consumers (currently
-[freelibraries4all](https://github.com/CommonerLLP/freelibraries4all.github.io)
+[theright2read](https://github.com/CommonerLLP/theright2read.github.io)
 and [academiaindia](https://github.com/CommonerLLP/academiaindia)).
 
 ## Licence
