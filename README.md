@@ -370,11 +370,23 @@ python -m sansad_semantic_crawler export --help
 
 ## Status and roadmap
 
-This is the **0.4.0** release: the crawler now features automated MP party/state
-enrichment for question manifests, automated committee composition rosters
-(with API + PDF/LLM fallback), and a refactored `BaseCrawler` architecture.
-The upcoming **0.5.0** release will focus on cross-referencing ATRs to original
-reports and improved entity extraction from debate transcripts.
+This is the **0.6.0** release. Highlights since 0.5.0:
+
+- **LLM second-pass discourse classifier.** A 9th label (`FACTUAL_DISCLOSURE`)
+  and an opt-in second tier (`--llm-tier`) that escalates `UNCLASSIFIED` records
+  from the regex tier to any OpenAI/Ollama-compatible chat-completions endpoint.
+- **Committee PDF URL encoding fix.** Standing-committee URLs containing
+  literal spaces in path components (e.g. `Rural Development and
+  Panchayati Raj`) now download cleanly. Previously every such PDF
+  silently failed with `URL can't contain control characters`.
+- **Per-bucket telemetry, Bayesian weighting engine, surface discourse
+  classifier, ATR/Q/A pair extraction, entity scaffolding** all
+  shipped in 0.5.0 and stable in 0.6.0.
+
+The upcoming **0.7.0** release will focus on cross-referencing ATRs to original
+reports, debate-transcript entity extraction, and a regex-tier `regex_v2`
+that picks up the "AIM/Ministry acknowledges the views/observations of the
+Committee" register surfaced by the v0.6.0 committee-channel research.
 
 Planned for later releases:
 
