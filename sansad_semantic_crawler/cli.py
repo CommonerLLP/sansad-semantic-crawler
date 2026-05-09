@@ -165,7 +165,15 @@ def analyse_discourse_cmd(args: argparse.Namespace) -> None:
         raise SystemExit(
             f"no answers.jsonl at {out}/answers.jsonl — run 'extract-answers' first"
         )
-    analyse_discourse(out, refresh=args.refresh, log_fn=print)
+    analyse_discourse(
+        out,
+        refresh=args.refresh,
+        log_fn=print,
+        llm_tier=args.llm_tier,
+        llm_endpoint=args.llm_endpoint,
+        llm_model=args.llm_model,
+        llm_timeout_s=args.llm_timeout,
+    )
 
 
 def analyse_weights_cmd(args: argparse.Namespace) -> None:
@@ -253,11 +261,38 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Classify ministry responses by political function "
             "(ACCEPTED/DEFLECTED/ABSORBED/REJECTED/SUBSTITUTED/DATA_WITHHELD/"
-            "SCOPE_NARROWED/CIRCULAR_REFERENCE) into analysis_discourse.jsonl"
+            "SCOPE_NARROWED/CIRCULAR_REFERENCE/FACTUAL_DISCLOSURE) into "
+            "analysis_discourse.jsonl. Use --llm-tier to pass UNCLASSIFIED "
+            "records to a local Ollama model as a second-pass classifier."
         ),
     )
     analyse.add_argument("--out", required=True, help="Corpus directory containing answers.jsonl")
     analyse.add_argument("--refresh", action="store_true")
+    analyse.add_argument(
+        "--llm-tier",
+        action="store_true",
+        help=(
+            "Enable LLM second-pass for UNCLASSIFIED records. Requires a "
+            "running Ollama instance at --llm-endpoint (default "
+            "http://localhost:11434/v1)."
+        ),
+    )
+    analyse.add_argument(
+        "--llm-endpoint",
+        default="http://localhost:11434/v1",
+        help="OpenAI-compatible chat completions base URL (default: Ollama localhost).",
+    )
+    analyse.add_argument(
+        "--llm-model",
+        default="qwen2.5:7b",
+        help="Model name for the LLM tier (default: qwen2.5:7b).",
+    )
+    analyse.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=30.0,
+        help="HTTP timeout in seconds for each LLM request (default: 30).",
+    )
     analyse.set_defaults(func=analyse_discourse_cmd)
 
     weights = sub.add_parser(

@@ -4,8 +4,7 @@ Classifies a ministry response by its **actual political function**, not
 its surface politeness. Reads ``answers.jsonl`` (Phase 1 output) and
 writes ``analysis_discourse.jsonl`` (Phase 4 input).
 
-Eight discourse labels, **locked** for v0.5.0 (per
-``notes/PLAN_v0.5.0_SCOPE.md``):
+Nine discourse labels (eight regex-matched + one LLM-tier addition):
 
 * ``ACCEPTED`` — concrete commitment with specifics (rare).
 * ``DEFLECTED`` — indefinite deferral via present-continuous.
@@ -17,15 +16,27 @@ Eight discourse labels, **locked** for v0.5.0 (per
   (Q/A-specific jurisdiction dodge).
 * ``CIRCULAR_REFERENCE`` — points back to its own earlier non-answer
   (committee-specific).
+* ``FACTUAL_DISCLOSURE`` — direct factual recitation without evasion or
+  new commitment (LLM-tier only; regex does not fire this label).
 
 Adding a new label is **safe** (additive). Renaming or removing one is
 a **breaking change** for downstream consumers (weighting engine,
-front-end consumers). Add only at major-version boundaries with an
-``upgrade_notes`` line in the GitHub Release.
+front-end consumers). Add only at major-version boundaries.
 
-This module is **deterministic and traceable**, not authoritative
-(Power, *Making Things Auditable*). ``UNCLASSIFIED`` records are not
-failures; they are flags for human review or a future LLM tier.
+Two classifier tiers:
+
+1. **Regex tier** (``CLASSIFIER_VERSION = 'regex_v1'``): deterministic,
+   zero latency, no external deps. Fires first on every record.
+
+2. **LLM tier** (``LLM_CLASSIFIER_VERSION = 'llm_discourse_v1'``):
+   calls an Ollama-compatible endpoint for records the regex tier leaves
+   UNCLASSIFIED. Enabled explicitly with ``llm_tier=True`` in
+   ``analyse_discourse`` (or ``--llm-tier`` on the CLI). Requires a
+   running Ollama instance (default ``http://localhost:11434/v1``).
+
+This module is **deterministic and traceable**, not authoritative.
+``UNCLASSIFIED`` records are not failures; they are flags for human
+review or LLM-tier escalation.
 """
 
 from __future__ import annotations
@@ -35,9 +46,12 @@ import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Callable, Iterable
+from urllib import request as _url_request
+from urllib.error import HTTPError, URLError
 
 CLASSIFIER_VERSION = "regex_v1"
+LLM_CLASSIFIER_VERSION = "llm_discourse_v1"
 
 # Channel labels travel with each classification so cross-channel queries
 # ("how does the same ministry's evasion grammar differ between Q/A and
@@ -185,8 +199,8 @@ _CIRCULAR_REFERENCE = _LabelDef(
 _PRIORITY_QA = (_DATA_WITHHELD, _SCOPE_NARROWED, _ACCEPTED, _REJECTED, _SUBSTITUTED, _DEFLECTED, _ABSORBED)
 _PRIORITY_COMMITTEE = (_CIRCULAR_REFERENCE, _ACCEPTED, _REJECTED, _SUBSTITUTED, _DEFLECTED, _ABSORBED)
 
-# Confidence per label: chosen empirically, can be tuned. Higher means we
-# trust the regex match more strongly (less chance of false positive).
+# Confidence per label: chosen empirically. Higher means we trust the regex
+# match more strongly (less chance of false positive).
 _CONFIDENCE: dict[str, float] = {
     "ACCEPTED": 0.85,        # very specific patterns (Rs. amounts, w.e.f. dates)
     "REJECTED": 0.90,        # near-impossible to misread "does not agree"
@@ -199,11 +213,97 @@ _CONFIDENCE: dict[str, float] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# LLM tier — taxonomy descriptions + prompt construction
+# ---------------------------------------------------------------------------
+
+# All nine labels with plain-English descriptions used in the LLM system
+# prompt. Keeping these in a public dict lets callers (tests, notebooks)
+# inspect what the model is asked to decide between.
+DISCOURSE_LABEL_DESCRIPTIONS: dict[str, str] = {
+    "ACCEPTED": (
+        "Concrete commitment with specifics: a budget allocation, notification issued, "
+        "an order with w.e.f. date, or an approved scheme with named timeline."
+    ),
+    "DEFLECTED": (
+        "Indefinite deferral with no timeline or accountability trigger: "
+        "'under consideration', 'steps are being taken', 'will be examined', "
+        "'in due course'."
+    ),
+    "ABSORBED": (
+        "Acknowledged without commitment: 'noted', 'ministry appreciates the concern', "
+        "'in the spirit of the recommendation'. The clock runs out."
+    ),
+    "REJECTED": (
+        "Flat refusal: 'does not agree', 'not feasible', 'does not arise', "
+        "'resource constraints'. The recommendation or question is dead."
+    ),
+    "SUBSTITUTED": (
+        "Replaces the question's metric with the ministry's preferred framing: "
+        "cites total recruitments instead of vacancies, flagship scheme totals "
+        "instead of the specific issue raised."
+    ),
+    "DATA_WITHHELD": (
+        "Data exists but is not provided: 'no separate data maintained', "
+        "'information not centrally compiled', 'data is being collected'. "
+        "The withholding is a deliberate choice. (QA channel only.)"
+    ),
+    "SCOPE_NARROWED": (
+        "Narrows scope to dodge the question: 'so far as this Ministry is concerned', "
+        "'does not fall within the purview', 'pertains to State Governments'. "
+        "(QA channel only.)"
+    ),
+    "CIRCULAR_REFERENCE": (
+        "Points to its own earlier non-answer: 'in continuation of earlier reply', "
+        "'ministry reiterates its earlier position', 'as already stated in reply to "
+        "Recommendation No. X'. (Committee channel only.)"
+    ),
+    "FACTUAL_DISCLOSURE": (
+        "Direct factual recitation without evasion, new commitment, or withholding: "
+        "lists programme details, district counts, budget outlays, beneficiary figures, "
+        "scheme progress. The ministry answers the question with data."
+    ),
+}
+
+
+def _build_llm_system_prompt() -> str:
+    """Construct the LLM system prompt from the shared taxonomy dictionary."""
+    taxonomy_lines = "\n".join(
+        f"- {label}: {desc}"
+        for label, desc in DISCOURSE_LABEL_DESCRIPTIONS.items()
+    )
+    return (
+        "You are classifying the political function of an Indian parliamentary "
+        "ministry response. Choose ONE label that best describes the response.\n\n"
+        "Labels:\n"
+        + taxonomy_lines
+        + "\n\nRules:\n"
+        "- Return EXACTLY ONE label from the list above.\n"
+        "- When multiple labels apply, prefer the most specific: DATA_WITHHELD > "
+        "DEFLECTED; CIRCULAR_REFERENCE > ABSORBED; FACTUAL_DISCLOSURE only when "
+        "no evasion whatsoever is present.\n"
+        "- Channel hint: 'qa' = written parliamentary Q&A answer; "
+        "'committee' = Action-Taken Report response.\n"
+        "- DATA_WITHHELD and SCOPE_NARROWED apply to 'qa' channel only.\n"
+        "- CIRCULAR_REFERENCE applies to 'committee' channel only.\n\n"
+        'Return JSON only: {"label": "ONE_LABEL", "confidence": 0.0, "reasoning": "one sentence"}'
+    )
+
+
+# Pre-build once at import time (cheap; the dict is a constant).
+_LLM_SYSTEM_PROMPT: str = _build_llm_system_prompt()
+
+# Max chars of response text sent to the LLM. Beyond this, the response is
+# truncated — LLMs perform better on focused excerpts and context windows are
+# finite. Full text is still stored in answers.jsonl.
+_LLM_TEXT_LIMIT = 2000
+
+
 @dataclass
 class DiscourseClassification:
-    label: str  # one of the eight, or "UNCLASSIFIED"
+    label: str  # one of the nine, or "UNCLASSIFIED"
     confidence: float
-    matched_pattern: str
+    matched_pattern: str  # regex group or LLM reasoning excerpt
     political_function: str
     channel: str  # 'qa' | 'committee'
     classifier: str = CLASSIFIER_VERSION
@@ -212,24 +312,30 @@ class DiscourseClassification:
         return asdict(self)
 
 
-def _empty_classification(channel: str) -> DiscourseClassification:
+def _empty_classification(channel: str, reason: str = "") -> DiscourseClassification:
     return DiscourseClassification(
         label="UNCLASSIFIED",
         confidence=0.0,
         matched_pattern="",
-        political_function="No pattern matched. Candidate for LLM-tier review.",
+        political_function=reason or "No pattern matched. Candidate for LLM-tier review.",
         channel=channel,
     )
 
 
+# ---------------------------------------------------------------------------
+# Regex classifier (Tier 1)
+# ---------------------------------------------------------------------------
+
+
 def classify_response(text: str, channel: str) -> DiscourseClassification:
-    """Classify a single ministry response by its political function.
+    """Classify a single ministry response by its political function (regex tier).
 
     ``channel`` is ``'qa'`` (Q/A answer) or ``'committee'`` (ATR response).
     Patterns are matched in channel-aware priority order; the first hit wins.
 
     Returns ``UNCLASSIFIED`` when no pattern matches; this is information,
-    not failure. Downstream consumers can filter or escalate.
+    not failure. Pass the result to ``classify_response_llm`` to attempt a
+    second-tier classification.
     """
     if not text or not text.strip():
         return _empty_classification(channel)
@@ -249,6 +355,126 @@ def classify_response(text: str, channel: str) -> DiscourseClassification:
 
 
 # ---------------------------------------------------------------------------
+# LLM classifier (Tier 2) — Ollama-compatible chat completions
+# ---------------------------------------------------------------------------
+
+
+def _discourse_http_post(
+    endpoint: str,
+    payload: dict[str, Any],
+    *,
+    timeout_s: float,
+) -> str:
+    """POST to an Ollama-compatible chat completions endpoint; return raw content."""
+    base = endpoint.rstrip("/")
+    url = base if base.endswith("/chat/completions") else f"{base}/chat/completions"
+    req = _url_request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer local",
+        },
+        method="POST",
+    )
+    try:
+        with _url_request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310
+            data = json.loads(resp.read().decode("utf-8"))
+            return data["choices"][0]["message"].get("content") or "{}"
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise RuntimeError(f"LLM endpoint unreachable: {exc}") from exc
+
+
+def _parse_llm_json(content: str) -> dict[str, Any]:
+    """Parse JSON from LLM output; falls back to extracting the first {...} block."""
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        m = re.search(r"\{[^{}]*\}", content, re.DOTALL)
+        if m:
+            return json.loads(m.group(0))
+        raise
+
+
+def classify_response_llm(
+    text: str,
+    channel: str,
+    *,
+    endpoint: str = "http://localhost:11434/v1",
+    model: str = "qwen2.5:7b",
+    timeout_s: float = 30.0,
+    _http_post: Callable[[str, dict[str, Any], float], str] | None = None,
+) -> DiscourseClassification:
+    """LLM second-pass classifier for records the regex tier left UNCLASSIFIED.
+
+    Calls an Ollama-compatible ``/v1/chat/completions`` endpoint.  Falls back
+    to UNCLASSIFIED (with an error note in ``political_function``) on any
+    network or parse failure so the corpus dispatcher never raises.
+
+    Parameters
+    ----------
+    text:
+        The ministry response text.
+    channel:
+        ``'qa'`` or ``'committee'`` — passed to the model as a channel hint.
+    endpoint:
+        Base URL of the Ollama (or OpenAI-compatible) server.
+    model:
+        Model name recognised by the endpoint (e.g. ``'qwen2.5:7b'``).
+    timeout_s:
+        HTTP request timeout in seconds.
+    _http_post:
+        Injection point for tests. When provided, called as
+        ``_http_post(endpoint, payload, timeout_s)`` instead of the real
+        HTTP layer.
+    """
+    if not text or not text.strip():
+        return _empty_classification(channel)
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "temperature": 0.0,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": _LLM_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"Channel: {channel}\n\nText:\n{text[:_LLM_TEXT_LIMIT]}"
+                ),
+            },
+        ],
+    }
+
+    try:
+        http_fn = _http_post or _discourse_http_post
+        raw_content = http_fn(endpoint, payload, timeout_s)
+        parsed = _parse_llm_json(raw_content)
+        label = str(parsed.get("label") or "").strip().upper()
+        if label not in DISCOURSE_LABEL_DESCRIPTIONS:
+            return _empty_classification(
+                channel,
+                reason=f"LLM returned unrecognised label: {label!r}",
+            )
+        reasoning = str(parsed.get("reasoning") or "")[:120]
+        confidence = float(parsed.get("confidence") or 0.75)
+        confidence = min(1.0, max(0.0, confidence))
+        return DiscourseClassification(
+            label=label,
+            confidence=confidence,
+            matched_pattern=reasoning,
+            political_function=DISCOURSE_LABEL_DESCRIPTIONS[label],
+            channel=channel,
+            classifier=LLM_CLASSIFIER_VERSION,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _empty_classification(
+            channel,
+            reason=f"LLM tier failed: {str(exc)[:80]}",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Corpus dispatcher
 # ---------------------------------------------------------------------------
 
@@ -260,6 +486,8 @@ class AnalysisStats:
     dfg_passed_through: int = 0
     skipped_empty_response: int = 0
     sources_processed: int = 0
+    llm_classified: int = 0    # records upgraded from UNCLASSIFIED by LLM tier
+    llm_unresolved: int = 0    # LLM called but response still UNCLASSIFIED
     label_counts: dict[str, int] = field(default_factory=dict)
     errors: list[dict] = field(default_factory=list)
 
@@ -277,7 +505,17 @@ def _read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> AnalysisStats:
+def analyse_discourse(
+    out_dir: Path,
+    *,
+    refresh: bool = False,
+    log_fn: Callable[..., None] = print,
+    llm_tier: bool = False,
+    llm_endpoint: str = "http://localhost:11434/v1",
+    llm_model: str = "qwen2.5:7b",
+    llm_timeout_s: float = 30.0,
+    _llm_http_post: Callable[[str, dict[str, Any], float], str] | None = None,
+) -> AnalysisStats:
     """Walk ``answers.jsonl``, classify each response, write
     ``analysis_discourse.jsonl``.
 
@@ -288,8 +526,13 @@ def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> 
       ``channel='committee'``.
     * ``kind == 'dfg_recommendation'``: passed through with
       ``discourse_label = null`` — these are committee asks awaiting a
-      future ATR; nothing to classify yet. Cross-link to a future ATR
-      response by ``(committee_slug, recommendation_no)`` is Phase 4 work.
+      future ATR; nothing to classify yet.
+
+    When ``llm_tier=True``, any record the regex tier leaves as UNCLASSIFIED
+    is sent to the LLM endpoint for a second-pass classification. The LLM
+    result replaces the UNCLASSIFIED placeholder in the output record. The
+    ``classifier`` field distinguishes ``'regex_v1'`` from ``'llm_discourse_v1'``
+    results.
 
     Output records are joinable to ``answers.jsonl`` and ``manifest.jsonl``
     via ``key``; multiple analysis rows per ``key`` are possible
@@ -326,12 +569,22 @@ def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> 
                     stats.skipped_empty_response += 1
                     continue
                 cls = classify_response(text, CHANNEL_QA)
+                cls = _maybe_llm_upgrade(
+                    cls, text, CHANNEL_QA, stats,
+                    enabled=llm_tier,
+                    endpoint=llm_endpoint,
+                    model=llm_model,
+                    timeout_s=llm_timeout_s,
+                    _http_post=_llm_http_post,
+                )
                 rec = {
                     **common,
                     "kind": "qa_response_analysis",
                     **cls.to_dict(),
                     "text_excerpt": text[:200],
                 }
+                # Override classifier field so LLM-upgraded records are traceable.
+                rec["classifier"] = cls.classifier
                 out_records.append(rec)
                 stats.qa_classified += 1
                 stats.label_counts[cls.label] = stats.label_counts.get(cls.label, 0) + 1
@@ -342,6 +595,14 @@ def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> 
                     stats.skipped_empty_response += 1
                     continue
                 cls = classify_response(text, CHANNEL_COMMITTEE)
+                cls = _maybe_llm_upgrade(
+                    cls, text, CHANNEL_COMMITTEE, stats,
+                    enabled=llm_tier,
+                    endpoint=llm_endpoint,
+                    model=llm_model,
+                    timeout_s=llm_timeout_s,
+                    _http_post=_llm_http_post,
+                )
                 rec = {
                     **common,
                     "kind": "atr_response_analysis",
@@ -349,6 +610,7 @@ def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> 
                     **cls.to_dict(),
                     "text_excerpt": text[:200],
                 }
+                rec["classifier"] = cls.classifier
                 out_records.append(rec)
                 stats.atr_classified += 1
                 stats.label_counts[cls.label] = stats.label_counts.get(cls.label, 0) + 1
@@ -380,11 +642,49 @@ def analyse_discourse(out_dir: Path, *, refresh: bool = False, log_fn=print) -> 
     tmp.replace(out_path)
 
     label_summary = ", ".join(f"{k}={v}" for k, v in sorted(stats.label_counts.items()))
+    llm_note = (
+        f" llm_upgraded={stats.llm_classified} llm_unresolved={stats.llm_unresolved}"
+        if llm_tier else ""
+    )
     log_fn(
         f"analysis_discourse.jsonl: qa={stats.qa_classified} "
         f"atr={stats.atr_classified} dfg_passthrough={stats.dfg_passed_through} "
         f"skipped_empty={stats.skipped_empty_response} errors={len(stats.errors)}"
+        + llm_note
     )
     if label_summary:
         log_fn(f"  labels: {label_summary}")
     return stats
+
+
+def _maybe_llm_upgrade(
+    cls: DiscourseClassification,
+    text: str,
+    channel: str,
+    stats: AnalysisStats,
+    *,
+    enabled: bool,
+    endpoint: str,
+    model: str,
+    timeout_s: float,
+    _http_post: Callable[[str, dict[str, Any], float], str] | None,
+) -> DiscourseClassification:
+    """If ``cls`` is UNCLASSIFIED and ``enabled``, call the LLM tier.
+
+    Updates ``stats.llm_classified`` or ``stats.llm_unresolved`` in-place.
+    Never raises.
+    """
+    if not enabled or cls.label != "UNCLASSIFIED":
+        return cls
+    llm_cls = classify_response_llm(
+        text, channel,
+        endpoint=endpoint,
+        model=model,
+        timeout_s=timeout_s,
+        _http_post=_http_post,
+    )
+    if llm_cls.label != "UNCLASSIFIED":
+        stats.llm_classified += 1
+        return llm_cls
+    stats.llm_unresolved += 1
+    return cls
