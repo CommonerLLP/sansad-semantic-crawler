@@ -84,8 +84,7 @@ from .runlog import topic_hash
 
 WEIGHTING_VERSION = "discourse_v0.5.0_bayesian_shrinkage"
 
-# Discourse-label categorisation. Locked vocabulary — see
-# notes/PRINCIPLES.md §V.4 and discourse.py.
+# Discourse-label categorisation. Locked vocabulary — see ``discourse.py``.
 SUBSTANTIVE_LABELS: frozenset[str] = frozenset({"ACCEPTED", "REJECTED"})
 EVASIVE_LABELS: frozenset[str] = frozenset({
     "DEFLECTED", "ABSORBED", "SUBSTITUTED",
@@ -98,10 +97,10 @@ EVASIVE_LABELS: frozenset[str] = frozenset({
 # party prior.
 DEFAULT_SHRINKAGE_N0 = 10.0
 
-# Default α/β for the corpus-vs-annotation merge formula. α=1.0,
-# β=0.0 means weights come entirely from corpus; annotations contribute
-# nothing in v0.5.0. When collaborator annotations land, β goes nonzero
-# and the merge formula in PRINCIPLES.md §VI takes over.
+# Default α/β for the corpus-vs-priors merge formula. α=1.0, β=0.0 means
+# weights come entirely from the corpus; an optional external-priors
+# layer contributes nothing in v0.5.0. When that layer is activated,
+# β goes nonzero and the merge formula takes over.
 DEFAULT_ALPHA = 1.0
 DEFAULT_BETA = 0.0
 
@@ -304,10 +303,9 @@ Each row's `basis` block carries the full lineage:
 
 ## What's NOT in here
 
-- Annotation-derived contributions to weights (β=0 in v0.5.0; the
-  schema and merge formula are reserved in
-  `notes/PRINCIPLES.md` §VI). When collaborators write
-  `notes/annotations/person_annotations.jsonl`, β goes nonzero.
+- External-priors contributions to weights (β=0 in v0.5.0; the merge
+  formula is reserved). When the optional priors layer is activated,
+  β goes nonzero.
 - Debate-floor data (the corpus is QA + committee reports only;
   `corpus_kinds_included` records this honestly).
 - Hindi-language responses (English-only classifier; `language_classified`
@@ -315,8 +313,8 @@ Each row's `basis` block carries the full lineage:
 
 ## Contestability
 
-Weights are not authoritative — they are deterministic-and-traceable
-(see `notes/PRINCIPLES.md` §V.4). Anyone can recompute them from the
+Weights are not authoritative — they are deterministic-and-traceable.
+Anyone can recompute them from the
 same `manifest.jsonl` + `analysis_discourse.jsonl` + `entities/` and
 the same topic profile (verified by `topic_hash`). Disagreements
 about what the apparatus measures are arguments about the topic

@@ -24,9 +24,8 @@ front-end consumers). Add only at major-version boundaries with an
 ``upgrade_notes`` line in the GitHub Release.
 
 This module is **deterministic and traceable**, not authoritative
-(Power, *Making Things Auditable* — see `notes/PRINCIPLES.md` §V.4).
-``UNCLASSIFIED`` records are not failures; they are flags for human
-review or a future LLM tier.
+(Power, *Making Things Auditable*). ``UNCLASSIFIED`` records are not
+failures; they are flags for human review or a future LLM tier.
 """
 
 from __future__ import annotations

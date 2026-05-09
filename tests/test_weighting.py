@@ -299,9 +299,9 @@ class ComputeWeightsTests(unittest.TestCase):
 
     def test_no_long_text_fields_in_weights_outputs(self):
         """Privacy guard: even with β=0 today, a future regression that
-        copies annotation text into weights rows must fail this test.
-        Per PRINCIPLES.md §III.2 / VII.4: no annotation text in public
-        outputs.
+        copies external-priors text into weights rows must fail this
+        test. Public weights/*.jsonl must contain only numeric weights,
+        IDs, and short metadata — never free-text fields.
         """
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

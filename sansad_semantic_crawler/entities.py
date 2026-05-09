@@ -27,10 +27,9 @@ Reserved file names (schema committed, no implementation yet):
 The reserved-namespace policy means a future contributor knows the
 file name in advance; nothing is named ad-hoc.
 
-Annotations (collaborator-authored qualitative claims) live in
-``notes/annotations/`` at the repo level, NEVER in the corpus
-``entities/`` directory. Annotations are private; entity records are
-public.
+An optional external-priors layer (when activated) lives outside the
+corpus directory. Entity records are the public identity layer; any
+qualitative priors are kept separate.
 """
 
 from __future__ import annotations
@@ -102,10 +101,9 @@ the same person.
 
 ## Privacy
 
-Public outputs. Polemical or interpretive collaborator annotations
-live in `notes/annotations/` at the repo level (gitignored), never
-here. The ``weighting`` engine merges annotation contributions into
-numeric weights but never copies raw claim text into corpus output.
+Public outputs. The optional external-priors layer (when activated)
+lives outside the corpus directory. The ``weighting`` engine merges
+priors into numeric weights but never copies raw text into corpus output.
 """
 
 _HONORIFIC_RE = re.compile(
