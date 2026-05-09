@@ -13,12 +13,101 @@ researchers who pin a tag and want to know what they are pinning to.
 
 Planned for the next release:
 
+- Channel enum + dispatch dict to replace the binary `if channel == CHANNEL_QA`
+  fallthrough (architecture review finding; precondition for v0.7.0
+  debate-transcript work).
+- Rename `regex_v1` constants in `discourse.py` and `answers.py` to
+  disambiguate (`discourse_regex_v1` vs `answers_regex_v1`) before
+  any external consumer indexes the literal strings.
 - ATR-to-original-recommendation cross-linking.
 - Debate-transcript entity extraction.
 - `regex_v2` discourse classifier picking up the
   "AIM/Ministry acknowledges the views/observations of the Committee"
   register surfaced by the v0.6.0 committee-channel research.
+- Per-classifier weight stratification so audit-grade weights survive
+  the LLM tier becoming the default.
 - Hindi-language classification parity.
+
+## [0.6.1] — 2026-05-09
+
+Security patch release. Addresses six findings (three high, three
+medium) from a post-v0.6.0 security review of the LLM tier (introduced
+in v0.6.0) and the legacy crawler download paths.
+
+### Fixed (security)
+
+- **H1: SSRF / local-file disclosure in LLM endpoint** —
+  `classify_response_llm()` now validates the endpoint scheme against
+  an HTTP(S) allowlist before dispatching. Previously `file://`,
+  `ftp://`, `gopher://` and other urllib-supported schemes were
+  reachable, so a malicious topic-config endpoint string could read
+  local files via `urlopen` and have the bytes parsed as JSON. New
+  `--llm-block-private` CLI flag rejects loopback / private /
+  link-local hosts for hardened deployments.
+- **H2: `_REDACT_KEYS` was an exact-name match against
+  `{api_key, authorization, token}`.** Anything else (`apiKey`,
+  `OPENAI_API_KEY`, `secret`, `client_secret`, `access_token`,
+  `bearer_token`, `password`, `credential`) was written verbatim to
+  `_runs.jsonl`, which sister projects pin and redistribute. Replaced
+  with substring-based `_is_secret_key` check.
+- **H3: hardcoded `Authorization: Bearer local`** in
+  `_discourse_http_post`. Now accepts an `api_key` parameter with
+  `env:VAR_NAME` indirection (matching the convention in
+  `classifiers/llm.py`) and only sends the `Authorization` header
+  when a key is supplied. New `--llm-api-key` CLI flag.
+- **M1: PDF dest_path traversal** — sansad.in API field values
+  (`reportNo`, `uuid`, `qslno`) were interpolated raw into f-strings
+  building filenames. A malicious upstream returning `../../evil`
+  for one of these would have caused `write_pdf` to write outside
+  the intended `pdfs/` directory. New `safe_filename_segment()`
+  helper applied at all four PDF filename construction sites.
+- **M2: `_parse_llm_json` fallback regex broke on nested objects.**
+  Changed `\{[^{}]*\}` → `\{.*\}` (matching `classifiers/llm.py`).
+- **M4: exception text leaked into public output.** The
+  `political_function` field in `analysis_discourse.jsonl` was
+  embedding `f"LLM tier failed: {str(exc)[:80]}"`. Combined with H1
+  this would have leaked SSRF response fragments into the public
+  corpus. Now emits a categorical message only.
+
+### Added
+
+- `tests/test_security_hardening.py` — 11 regression tests pinning
+  each finding above against future drift.
+- `safe_filename_segment()` helper exported from `base.py` for any
+  future consumer that needs to write paths from upstream API data.
+- `--llm-api-key` CLI flag on `analyse-discourse` (supports
+  `env:VAR_NAME` indirection).
+- `--llm-block-private` CLI flag on `analyse-discourse` for hardened
+  deployments that should never call out to private/loopback hosts.
+
+### Documented
+
+- `notes/TECHDEBT.md` — 8 architecture findings from the same review
+  pass (channel-as-string fragility, `regex_v1` name collision,
+  weighting LLM-row stratification, duplicate HTTP layer between
+  `discourse.py` and `classifiers/llm.py`, hand-pinned
+  `TOOL_VERSION`, naive datetime, missing `topic_hash` in
+  `analysis_discourse.jsonl`, `export.py` blindness to discourse
+  layer). Scoped for v0.7.0.
+
+### Tests
+
+232 tests (up from 221).
+
+### Compatibility
+
+- **Backward compatible.** All v0.6.0 CLI flags continue to work
+  unchanged; new flags default to current behaviour.
+- **Schema-additive:** new error reasons in `political_function` are
+  shorter/categorical but the field type and presence are unchanged.
+- **Consumers** pinning `@v0.6.0` continue to work. Bumping to
+  `@v0.6.1` is recommended for any deployment that uses the
+  `--llm-tier`, since H1/H2/H3 affect the security boundary of the
+  LLM tier specifically.
+
+### Pull requests
+
+- [#19] fix: security hardening for LLM tier + crawler download paths
 
 ## [0.6.0] — 2026-05-09
 
@@ -204,7 +293,8 @@ Planned for the next release:
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.1
 [0.6.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.0
 [0.5.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.5.0
 [0.4.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.4.0
@@ -216,3 +306,4 @@ Planned for the next release:
 [#15]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/15
 [#16]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/16
 [#17]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/17
+[#19]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/19
