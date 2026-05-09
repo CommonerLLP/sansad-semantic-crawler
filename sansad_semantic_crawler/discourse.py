@@ -45,6 +45,7 @@ import ipaddress
 import json
 import os
 import re
+import socket
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -390,28 +391,67 @@ def _validate_llm_endpoint(endpoint: str, *, allow_private: bool = True) -> None
         raise ValueError("LLM endpoint URL has no hostname")
     if not allow_private:
         host = parts.hostname
-        # Try to parse as IP literal; if that fails, fall back to a small
-        # name-based loopback check. We do the IP-literal parse separately
-        # (rather than inside try/except ValueError) so that our own
-        # "private/loopback rejected" ValueError is not mistakenly caught.
-        addr = None
+        # First: is the host already an IP literal?
+        # We separate the IP-literal parse from the rejection branch so
+        # that our own "private/loopback rejected" ValueError is not
+        # mistakenly caught by the surrounding try/except.
+        ip_literal: ipaddress.IPv4Address | ipaddress.IPv6Address | None = None
         try:
-            addr = ipaddress.ip_address(host)
+            ip_literal = ipaddress.ip_address(host)
         except ValueError:
-            pass
-        if addr is not None:
-            if addr.is_private or addr.is_loopback or addr.is_link_local:
-                raise ValueError(
-                    f"LLM endpoint host is private/loopback; pass "
-                    "allow_private=True if intentional (e.g. local Ollama)."
-                )
+            # Not an IP literal — host is a DNS name. Fall through to
+            # name-based block + DNS resolution below.
+            ip_literal = None
+
+        addrs: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+        if ip_literal is not None:
+            addrs = [ip_literal]
         else:
-            # Hostname (not an IP literal). Block obvious loopback names;
-            # DNS resolution of arbitrary names is the caller's
-            # responsibility for the hardened path.
+            # Block obvious loopback names without doing DNS first.
             if host in {"localhost", "ip6-localhost", "ip6-loopback"}:
                 raise ValueError(
-                    f"LLM endpoint host is loopback; pass "
+                    "LLM endpoint host is loopback; pass "
+                    "allow_private=True if intentional (e.g. local Ollama)."
+                )
+            # Resolve the hostname and check every returned address.
+            # Without this, an attacker (or careless internal-DNS config)
+            # could point a name at 10.0.0.x or 169.254.169.254 and
+            # bypass --llm-block-private. We accept the latency cost on
+            # the hardened path.
+            try:
+                resolved = socket.getaddrinfo(
+                    host, None, type=socket.SOCK_STREAM,
+                )
+            except OSError as exc:
+                raise ValueError(
+                    f"LLM endpoint host could not be resolved: {type(exc).__name__}"
+                ) from exc
+            seen: set[str] = set()
+            for family, _kind, _proto, _name, sockaddr in resolved:
+                addr_str = sockaddr[0]
+                if addr_str in seen:
+                    continue
+                seen.add(addr_str)
+                try:
+                    addrs.append(ipaddress.ip_address(addr_str))
+                except ValueError:
+                    # Unrecognised address family — be conservative.
+                    raise ValueError(
+                        "LLM endpoint host resolved to an unrecognised "
+                        "address; refusing to dispatch."
+                    )
+
+        for a in addrs:
+            if (
+                a.is_private
+                or a.is_loopback
+                or a.is_link_local
+                or a.is_multicast
+                or a.is_reserved
+                or a.is_unspecified
+            ):
+                raise ValueError(
+                    "LLM endpoint host is private/loopback; pass "
                     "allow_private=True if intentional (e.g. local Ollama)."
                 )
 
@@ -472,19 +512,33 @@ def _discourse_http_post(
 
 
 def _parse_llm_json(content: str) -> dict[str, Any]:
-    """Parse JSON from LLM output; falls back to extracting a balanced ``{...}``
-    block if the model wraps the JSON in markdown fences or prose.
+    """Parse JSON from LLM output; falls back to extracting the first
+    balanced ``{...}`` block if the model wraps the JSON in markdown
+    fences or prose.
 
-    The greedy ``\\{.*\\}`` pattern handles nested objects (the prior
-    ``\\{[^{}]*\\}`` pattern broke on responses that included nested objects
-    like ``{"label": "...", "metadata": {"k": "v"}}``).
+    Uses ``json.JSONDecoder.raw_decode`` rather than a regex because
+    neither a non-greedy ``\\{[^{}]*\\}`` (breaks on nested objects) nor
+    a greedy ``\\{.*\\}`` (breaks on multiple objects, e.g. when the
+    model outputs the answer plus a trailing example) is correct. The
+    decoder walks JSON grammar properly: it returns the first valid
+    JSON value starting at offset, then we ignore anything after.
     """
+    decoder = json.JSONDecoder()
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        m = re.search(r"\{.*\}", content, re.DOTALL)
-        if m:
-            return json.loads(m.group(0))
+        # Find the first ``{`` and try raw_decode from there. If that
+        # ``{`` is part of an unbalanced/garbage prefix, advance and
+        # retry until success or end-of-input.
+        for start in range(len(content)):
+            if content[start] != "{":
+                continue
+            try:
+                obj, _end = decoder.raw_decode(content[start:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
         raise
 
 

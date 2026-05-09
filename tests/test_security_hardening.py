@@ -12,7 +12,7 @@ import json
 import os
 import re
 import unittest
-from unittest import mock
+import unittest.mock as mock
 
 from sansad_semantic_crawler.base import safe_filename_segment
 from sansad_semantic_crawler.discourse import (
@@ -91,6 +91,105 @@ class EndpointValidationTests(unittest.TestCase):
     def test_allowed_schemes_constant_is_immutable(self):
         # Must be a frozenset so a runtime mutation cannot widen the policy.
         self.assertIsInstance(_ALLOWED_LLM_SCHEMES, frozenset)
+
+    def test_hostname_resolving_to_private_ip_blocked(self):
+        """Regression for the P1 finding from PR #19's chatgpt-codex review:
+        a hostname (not an IP literal) was previously waved through, so a
+        DNS name pointing at a private/internal IP would bypass
+        --llm-block-private. Now we resolve and check every returned
+        address."""
+        # Mock getaddrinfo to return 10.0.0.5 for the hostname.
+        fake_resolved = [(2, 1, 6, "", ("10.0.0.5", 0))]
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            return_value=fake_resolved,
+        ):
+            with self.assertRaises(ValueError) as cm:
+                _validate_llm_endpoint(
+                    "https://internal.corp.example/v1",
+                    allow_private=False,
+                )
+            self.assertIn("private", str(cm.exception).lower())
+
+    def test_hostname_resolving_to_link_local_ip_blocked(self):
+        """169.254.169.254 (cloud metadata service) was the canonical SSRF
+        target before this fix."""
+        fake_resolved = [(2, 1, 6, "", ("169.254.169.254", 0))]
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            return_value=fake_resolved,
+        ):
+            with self.assertRaises(ValueError):
+                _validate_llm_endpoint(
+                    "http://metadata.attacker.example/",
+                    allow_private=False,
+                )
+
+    def test_hostname_resolving_to_public_ip_passes(self):
+        fake_resolved = [(2, 1, 6, "", ("8.8.8.8", 0))]
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            return_value=fake_resolved,
+        ):
+            _validate_llm_endpoint(
+                "https://dns.google/v1", allow_private=False,
+            )
+
+    def test_hostname_with_mixed_resolution_blocked_when_any_private(self):
+        """If a name resolves to BOTH public and private addresses, the
+        validator must reject — otherwise an attacker can poison DNS
+        with a public-prefixed first record and slip private ones in."""
+        fake_resolved = [
+            (2, 1, 6, "", ("8.8.8.8", 0)),
+            (2, 1, 6, "", ("10.0.0.1", 0)),
+        ]
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            return_value=fake_resolved,
+        ):
+            with self.assertRaises(ValueError):
+                _validate_llm_endpoint(
+                    "https://mixed.example/", allow_private=False,
+                )
+
+    def test_dns_failure_blocked_in_hardened_mode(self):
+        """If we can't resolve the host at all, refuse rather than
+        falling through and letting urllib do it (where it would
+        bypass our policy check)."""
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            side_effect=OSError("nodename nor servname provided"),
+        ):
+            with self.assertRaises(ValueError) as cm:
+                _validate_llm_endpoint(
+                    "https://nonexistent.example/", allow_private=False,
+                )
+            self.assertIn("resolved", str(cm.exception).lower())
+
+    def test_dns_resolution_skipped_when_allow_private_true(self):
+        """The default zero-config local-Ollama path should not pay the
+        DNS-resolution latency cost. The validator only resolves when
+        allow_private=False."""
+        called = []
+        original = __import__(
+            "sansad_semantic_crawler.discourse", fromlist=["socket"]
+        ).socket.getaddrinfo
+
+        def _track(*args, **kwargs):
+            called.append(args)
+            return original(*args, **kwargs)
+
+        with mock.patch(
+            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            side_effect=_track,
+        ):
+            _validate_llm_endpoint(
+                "https://api.example.com/v1", allow_private=True,
+            )
+        self.assertEqual(
+            called, [],
+            "DNS resolution must not happen when allow_private=True",
+        )
 
 
 class SsrfThroughClassifyResponseLlmTests(unittest.TestCase):
@@ -307,13 +406,52 @@ class ParseLlmJsonTests(unittest.TestCase):
         self.assertEqual(out["label"], "DEFLECTED")
 
     def test_nested_objects_recovered(self):
-        # The previous regex \{[^{}]*\} would NOT match this because of
-        # the inner braces. The fix uses \{.*\} to handle nesting.
         prefix = "Here is the result:\n"
         wrapped = prefix + '{"label": "ACCEPTED", "metadata": {"k": "v"}}'
         out = _parse_llm_json(wrapped)
         self.assertEqual(out["label"], "ACCEPTED")
         self.assertEqual(out["metadata"]["k"], "v")
+
+    def test_first_object_returned_when_trailing_object_present(self):
+        """Regression for the P2 finding from PR #19's chatgpt-codex
+        review: a greedy ``\\{.*\\}`` pattern would span from the first
+        ``{`` to the LAST ``}`` and json.loads would fail on the
+        concatenated content. Now we use raw_decode which returns the
+        first valid JSON value and ignores trailing content."""
+        content = (
+            '{"label": "DEFLECTED", "confidence": 0.8}\n\n'
+            'Here is an example: {"label": "EXAMPLE", "confidence": 1.0}'
+        )
+        out = _parse_llm_json(content)
+        self.assertEqual(out["label"], "DEFLECTED")
+        self.assertAlmostEqual(out["confidence"], 0.8)
+
+    def test_object_after_markdown_fence_with_trailing_prose(self):
+        content = (
+            '```json\n{"label": "ACCEPTED", "confidence": 0.9}\n```\n\n'
+            'Note: this is an example response.'
+        )
+        out = _parse_llm_json(content)
+        self.assertEqual(out["label"], "ACCEPTED")
+
+    def test_object_with_nested_array_of_objects(self):
+        content = (
+            'The result is: '
+            '{"label": "DEFLECTED", "evidence": [{"phrase": "in due course"}, '
+            '{"phrase": "under consideration"}]}'
+        )
+        out = _parse_llm_json(content)
+        self.assertEqual(out["label"], "DEFLECTED")
+        self.assertEqual(len(out["evidence"]), 2)
+
+    def test_garbage_prefix_skipped_to_first_valid_object(self):
+        content = '{ this is not valid json }\nbut later: {"label": "ABSORBED"}'
+        out = _parse_llm_json(content)
+        self.assertEqual(out["label"], "ABSORBED")
+
+    def test_no_json_at_all_raises(self):
+        with self.assertRaises(json.JSONDecodeError):
+            _parse_llm_json("totally non-json prose with no braces at all")
 
 
 # --------------------------------------------------------------------------- #
