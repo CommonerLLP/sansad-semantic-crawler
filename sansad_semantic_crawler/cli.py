@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .answers import extract_answers
 from .committees import CommitteeCrawler, resolve_committees
+from .discourse import analyse_discourse
 from .export import build_summary, write_export
 from .sansad import SansadCrawler
 from .textparse import parse_corpus
@@ -157,6 +158,15 @@ def extract_answers_cmd(args: argparse.Namespace) -> None:
     extract_answers(out, refresh=args.refresh, log_fn=print)
 
 
+def analyse_discourse_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "answers.jsonl").exists():
+        raise SystemExit(
+            f"no answers.jsonl at {out}/answers.jsonl — run 'extract-answers' first"
+        )
+    analyse_discourse(out, refresh=args.refresh, log_fn=print)
+
+
 def parse_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
@@ -226,6 +236,18 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--out", required=True, help="Corpus directory containing manifest.jsonl + downloaded PDFs")
     extract.add_argument("--refresh", action="store_true", help="Force re-extraction even if answers.jsonl exists")
     extract.set_defaults(func=extract_answers_cmd)
+
+    analyse = sub.add_parser(
+        "analyse-discourse",
+        help=(
+            "Classify ministry responses by political function "
+            "(ACCEPTED/DEFLECTED/ABSORBED/REJECTED/SUBSTITUTED/DATA_WITHHELD/"
+            "SCOPE_NARROWED/CIRCULAR_REFERENCE) into analysis_discourse.jsonl"
+        ),
+    )
+    analyse.add_argument("--out", required=True, help="Corpus directory containing answers.jsonl")
+    analyse.add_argument("--refresh", action="store_true")
+    analyse.set_defaults(func=analyse_discourse_cmd)
 
     parse = sub.add_parser("parse")
     parse.add_argument("--topic", required=True)
