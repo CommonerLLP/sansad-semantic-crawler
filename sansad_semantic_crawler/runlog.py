@@ -37,7 +37,7 @@ _REDACT_KEYS: frozenset[str] = frozenset({"api_key", "authorization", "token"})
 
 # Tool version pinned here rather than imported to keep this module
 # zero-dependency. Bump in lockstep with pyproject.toml.
-TOOL_VERSION = "0.3.0"
+TOOL_VERSION = "0.5.0"
 
 
 def _now() -> str:
