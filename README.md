@@ -370,6 +370,8 @@ python -m sansad_semantic_crawler export --help
 
 ## Status and roadmap
 
+The full per-release timeline lives in [CHANGELOG.md](CHANGELOG.md).
+
 This is the **0.6.0** release. Highlights since 0.5.0:
 
 - **LLM second-pass discourse classifier.** A 9th label (`FACTUAL_DISCLOSURE`)
