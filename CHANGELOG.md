@@ -28,6 +28,67 @@ Planned for the next release:
   the LLM tier becoming the default.
 - Hindi-language classification parity.
 
+## [0.6.4] — 2026-05-09
+
+### Added — research-assistant CLI trio
+
+Three new CLI subcommands that turn ad-hoc demo queries into reproducible
+artifacts. Each is small, reads existing JSONL outputs, carries
+`topic_hash` provenance, and is independently useful.
+
+- **`extract-atr-linkage`** — for every Action Taken Report in
+  `manifest.jsonl`, parses the title to find the original report it
+  cites; writes `atr_linkage.jsonl`. Handles three real-corpus title
+  variants (digit-at-anchor, word-at-anchor like
+  `"Three Hundred And Sixty Sixth Report"`, and the older
+  `"Report No. N"` form). Anchored matching against
+  `"contained in the"` is required because the ATR's own number
+  appears earlier in the title than the referenced one. Live-corpus
+  result: 83 / 96 ADP committee ATRs get a linkage extracted (was 31
+  with a naive regex). Output rows carry `references_report_no` plus
+  the computed `references_report_key` for direct join into
+  `manifest.jsonl`.
+- **`mp-summary`** — aggregates per-MP question count, ministries
+  asked, and response-label distribution. Keys by stable `entity_id`
+  when the resolver was used; falls back to a name-based key. Each
+  row carries party, state, house, `substantive_count`,
+  `evasive_count`, and `evasion_rate_classified`. Skips committee
+  records (no single asker). Output: `mp_summary.jsonl`.
+- **`analyse-ministry`** — aggregates per-ministry (Q/A channel) and
+  per-committee (committee channel) response patterns. Two output
+  files: `ministry_summary_qa.jsonl` and
+  `ministry_summary_committee.jsonl`. Each row carries a
+  `per_evasion_label_share` field — what fraction of evasive
+  responses are DEFLECTED vs DATA_WITHHELD vs SUBSTITUTED — i.e. the
+  *grammar* of evasion, not just its rate. Committee rows also
+  itemise `rejected_recommendation_keys` so a researcher can trace
+  specific recommendations the ministry refused.
+
+### Why this matters
+
+These three turn the crawler into a reusable research instrument.
+With the live ADP corpus on disk, an opposition MP's research
+assistant can now run `mp-summary` to find every question asked on a
+topic by party, then `analyse-ministry` to identify the ministries
+where evasion is structural, then `extract-atr-linkage` to follow
+specific recommendations through their committee → ATR life cycle.
+None of this required a re-crawl; all three subcommands operate on
+existing JSONL.
+
+### Tests
+
+299 tests passing (up from 267). 19 new tests pinning anchor
+priority, words-form number conversion, entity_id vs name fallback,
+evasion-rate edge cases, and qa / committee output separation.
+
+### Compatibility
+
+Backward compatible. New CLI subcommands; nothing existing changes.
+
+### Pull requests
+
+- [#25] feat: research-assistant CLI trio
+
 ## [0.6.3] — 2026-05-09
 
 ### Added
@@ -406,7 +467,8 @@ in v0.6.0) and the legacy crawler download paths.
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.4
 [0.6.3]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.3
 [0.6.2]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.2
 [0.6.1]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.1
@@ -424,3 +486,4 @@ in v0.6.0) and the legacy crawler download paths.
 [#19]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/19
 [#21]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/21
 [#23]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/23
+[#25]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/25

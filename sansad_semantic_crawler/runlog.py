@@ -46,7 +46,7 @@ _REDACT_SUBSTRINGS: frozenset[str] = frozenset({
 
 # Tool version pinned here rather than imported to keep this module
 # zero-dependency. Bump in lockstep with pyproject.toml.
-TOOL_VERSION = "0.6.3"
+TOOL_VERSION = "0.6.4"
 
 
 def _now() -> str:
