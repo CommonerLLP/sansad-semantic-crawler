@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .aggregations import write_ministry_summary, write_mp_summary
 from .answers import extract_answers
+from .atr_linkage import extract_atr_linkages
 from .committees import CommitteeCrawler, resolve_committees
 from .discourse import analyse_discourse
 from .export import build_summary, write_export
@@ -188,6 +190,29 @@ def analyse_weights_cmd(args: argparse.Namespace) -> None:
     compute_weights(out, topic_profile_path=args.topic, shrinkage_n0=args.shrinkage_n0, log_fn=print)
 
 
+def extract_atr_linkage_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "manifest.jsonl").exists():
+        raise SystemExit(f"no manifest at {out}/manifest.jsonl — run 'crawl-committees' first")
+    extract_atr_linkages(out, log_fn=print)
+
+
+def mp_summary_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "manifest.jsonl").exists():
+        raise SystemExit(f"no manifest at {out}/manifest.jsonl — run 'crawl' first")
+    topic_path = Path(args.topic) if args.topic else None
+    write_mp_summary(out, topic_profile_path=topic_path, log_fn=print)
+
+
+def analyse_ministry_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "manifest.jsonl").exists():
+        raise SystemExit(f"no manifest at {out}/manifest.jsonl — run 'crawl' / 'crawl-committees' first")
+    topic_path = Path(args.topic) if args.topic else None
+    write_ministry_summary(out, topic_profile_path=topic_path, log_fn=print)
+
+
 def parse_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
@@ -337,6 +362,48 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     weights.set_defaults(func=analyse_weights_cmd)
+
+    atr_link = sub.add_parser(
+        "extract-atr-linkage",
+        help=(
+            "For every Action Taken Report in manifest.jsonl, parse the title "
+            "to find the original report it cites. Writes atr_linkage.jsonl with "
+            "atr_no -> referenced_report_no mappings."
+        ),
+    )
+    atr_link.add_argument("--out", required=True, help="Corpus directory containing manifest.jsonl")
+    atr_link.set_defaults(func=extract_atr_linkage_cmd)
+
+    mp_sum = sub.add_parser(
+        "mp-summary",
+        help=(
+            "Aggregate per-MP question count + ministries asked + response-label "
+            "distribution from manifest.jsonl + analysis_discourse.jsonl. "
+            "Writes mp_summary.jsonl."
+        ),
+    )
+    mp_sum.add_argument("--out", required=True, help="Corpus directory")
+    mp_sum.add_argument(
+        "--topic",
+        help="Topic profile JSON (for topic_hash provenance on each row).",
+    )
+    mp_sum.set_defaults(func=mp_summary_cmd)
+
+    min_sum = sub.add_parser(
+        "analyse-ministry",
+        help=(
+            "Aggregate per-ministry (Q/A) and per-committee (committee reports) "
+            "response patterns: total records, label distribution, evasion rate, "
+            "per-evasion-label share, and rejected recommendation keys. "
+            "Writes ministry_summary_qa.jsonl + ministry_summary_committee.jsonl."
+        ),
+    )
+    min_sum.add_argument("--out", required=True, help="Corpus directory")
+    min_sum.add_argument(
+        "--topic",
+        help="Topic profile JSON (for topic_hash provenance on each row).",
+    )
+    min_sum.set_defaults(func=analyse_ministry_cmd)
 
     parse = sub.add_parser("parse")
     parse.add_argument("--topic", required=True)
