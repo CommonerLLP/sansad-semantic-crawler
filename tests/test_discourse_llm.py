@@ -29,6 +29,7 @@ from sansad_semantic_crawler.discourse import (
     LLM_CLASSIFIER_VERSION,
     analyse_discourse,
     classify_response_llm,
+    _discourse_http_post,
 )
 
 
@@ -168,6 +169,34 @@ class ClassifyResponseLlmTests(unittest.TestCase):
         classify_response_llm("text", CHANNEL_COMMITTEE, _http_post=_capture_post)
         user_msg = captured[0]["messages"][1]["content"]
         self.assertIn("committee", user_msg)
+
+    def test_real_http_helper_called_with_keyword_timeout(self):
+        """Regression: _discourse_http_post defines timeout_s as keyword-only.
+        classify_response_llm must pass it as a keyword argument or every
+        production LLM call silently fails with TypeError → UNCLASSIFIED.
+        """
+        # Verify the helper's signature is keyword-only for timeout_s.
+        import inspect
+        sig = inspect.signature(_discourse_http_post)
+        param = sig.parameters["timeout_s"]
+        self.assertEqual(
+            param.kind,
+            inspect.Parameter.KEYWORD_ONLY,
+            "_discourse_http_post.timeout_s must be keyword-only",
+        )
+        # Verify the call site uses the keyword form by confirming the
+        # mock receives timeout_s as a keyword (Python allows keyword calls
+        # on positional params, so this works for both real and mock helpers).
+        received_kwargs: list[dict] = []
+
+        def _kw_capturing_post(endpoint, payload, *, timeout_s):
+            received_kwargs.append({"timeout_s": timeout_s})
+            return json.dumps({"label": "DEFLECTED", "confidence": 0.8})
+
+        classify_response_llm(
+            "text", CHANNEL_QA, _http_post=_kw_capturing_post, timeout_s=15.0
+        )
+        self.assertEqual(received_kwargs[0]["timeout_s"], 15.0)
 
 
 # ---------------------------------------------------------------------------

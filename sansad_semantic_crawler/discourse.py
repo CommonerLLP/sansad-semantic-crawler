@@ -448,7 +448,7 @@ def classify_response_llm(
 
     try:
         http_fn = _http_post or _discourse_http_post
-        raw_content = http_fn(endpoint, payload, timeout_s)
+        raw_content = http_fn(endpoint, payload, timeout_s=timeout_s)
         parsed = _parse_llm_json(raw_content)
         label = str(parsed.get("label") or "").strip().upper()
         if label not in DISCOURSE_LABEL_DESCRIPTIONS:
