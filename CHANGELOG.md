@@ -28,6 +28,44 @@ Planned for the next release:
   the LLM tier becoming the default.
 - Hindi-language classification parity.
 
+## [0.6.5] — 2026-05-09
+
+### Added — structured Q/A sub-fields
+
+First step toward the v0.7.0 `mp-draft` bridge feature for Azad
+(per `notes/ROADMAP.md`). `split_qa()` has emitted full
+`question_text` / `answer_text` halves since v0.5.0; this release adds
+*structured* sub-fields stripped of PDF boilerplate so embedding-based
+search has clean text to index in v0.7.0.
+
+Five new additive sub-fields on Q/A records in `answers.jsonl`:
+
+- `question_subject` — the all-caps topic line (e.g. `"ANNUAL INCOME OF SHGS"`)
+- `question_stem` — `"Will the Minister of X be pleased to state:"`
+- `question_body` — the (a) / (b) / (c) / (d) sub-questions
+- `answer_minister_name` — extracted from the `(NAME)` paren in the
+  answer prelude
+- `answer_body` — answer text with the minister-name preamble stripped
+
+Each parser is best-effort. When its anchor isn't found, the field is
+**omitted** from `to_record()` rather than emitted as an empty-string
+placeholder that would lie about presence. Legacy `question_text` and
+`answer_text` are unchanged.
+
+Live ADP Q/A coverage (n=279): `answer_minister_name` 95%, `question_subject` 33%, `question_stem` 34%. The lower subject/stem rates reflect real corpus variability; about a third of Lok Sabha Q/A PDFs don't follow the canonical "Will the Minister of X be pleased to state:" form.
+
+### Tests
+
+313 tests passing (up from 299). 14 new tests in `tests/test_qa_structured_parse.py`.
+
+### Compatibility
+
+Backward compatible. Schema-additive: existing fields unchanged.
+
+### Pull requests
+
+- [#27] feat(v0.6.5): structured Q/A sub-fields
+
 ## [0.6.4] — 2026-05-09
 
 ### Added — research-assistant CLI trio
@@ -467,7 +505,8 @@ in v0.6.0) and the legacy crawler download paths.
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.5
 [0.6.4]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.4
 [0.6.3]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.3
 [0.6.2]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.2
@@ -487,3 +526,4 @@ in v0.6.0) and the legacy crawler download paths.
 [#21]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/21
 [#23]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/23
 [#25]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/25
+[#27]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/27
