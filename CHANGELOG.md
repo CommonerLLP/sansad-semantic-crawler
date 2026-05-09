@@ -28,6 +28,56 @@ Planned for the next release:
   the LLM tier becoming the default.
 - Hindi-language classification parity.
 
+## [0.6.6] — 2026-05-09
+
+### Added — `mp-dossier` CLI subcommand (per-MP topic briefing)
+
+The first analyst-facing lever from `notes/ROADMAP.md §IV`: given an MP's
+`entity_id` (preferred) or loose `--name`, generate a single Markdown
+briefing covering their entire question history on a corpus, grouped
+by topic, with the ministerial response-label distribution and
+excerpts of evasion text per topic.
+
+The artefact is what the analyst reads to make the bridging-knowledge
+call (per `notes/PRODUCT_DESIGN.md §IV`). The crawler does *not*
+suggest reframings; it makes the gap visible — *"on libraries, this MP
+got SCOPE_NARROWED 3 times"* — so the analyst applies their domain
+knowledge to suggest a better framing.
+
+```
+sansad-crawl mp-dossier --out <corpus_dir> --entity-id PERSON_xxx
+sansad-crawl mp-dossier --out <corpus_dir> --name "Sivadasan"
+```
+
+Output: `<corpus_dir>/mp_dossiers/<slug>.md`.
+
+Topic clustering uses keyword overlap on the v0.6.5 `question_subject`
+field, normalised by stop-word removal + sorted-token-set keying. No
+embeddings — those arrive in v0.7.0 only if v0.6.6 keyword overlap is
+demonstrably insufficient. Records without a parsed `question_subject`
+fall into a single `"Uncategorised"` bucket rather than being silently
+dropped (coverage is honest, not hidden).
+
+The dossier section heading for each topic is the most common original
+surface form across the cluster, not whichever record happened to come
+last in iteration order.
+
+### Validation posture
+
+🟡 **User-validated, awaiting deployment iteration.** The next step is
+to run `mp-dossier` for Sivadasan against a libraries-topic corpus,
+hand the Markdown to his office, and iterate based on whether the
+output is useful. If unreadable or missing topics he actually cares
+about, slip and fix.
+
+### Tests
+
+335 tests passing (up from 313). 22 new tests in
+`tests/test_dossier.py` covering topic-key normalisation, loose name
+matching, record selection by entity_id and name, Markdown rendering,
+empty-corpus handling, `mp_dossiers/` slug derivation, and topic-key
+clustering.
+
 ## [0.6.5] — 2026-05-09
 
 ### Added — structured Q/A sub-fields

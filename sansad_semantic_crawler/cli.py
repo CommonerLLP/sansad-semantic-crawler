@@ -8,6 +8,7 @@ from .answers import extract_answers
 from .atr_linkage import extract_atr_linkages
 from .committees import CommitteeCrawler, resolve_committees
 from .discourse import analyse_discourse
+from .dossier import build_mp_dossier
 from .export import build_summary, write_export
 from .sansad import SansadCrawler
 from .textparse import parse_corpus
@@ -213,6 +214,22 @@ def analyse_ministry_cmd(args: argparse.Namespace) -> None:
     write_ministry_summary(out, topic_profile_path=topic_path, log_fn=print)
 
 
+def mp_dossier_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not (out / "manifest.jsonl").exists():
+        raise SystemExit(f"no manifest at {out}/manifest.jsonl — run 'crawl' first")
+    if not args.entity_id and not args.name:
+        raise SystemExit("either --entity-id or --name is required")
+    topic_path = Path(args.topic) if args.topic else None
+    build_mp_dossier(
+        out,
+        entity_id=args.entity_id,
+        name=args.name,
+        topic_profile_path=topic_path,
+        log_fn=print,
+    )
+
+
 def parse_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
@@ -404,6 +421,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Topic profile JSON (for topic_hash provenance on each row).",
     )
     min_sum.set_defaults(func=analyse_ministry_cmd)
+
+    dossier = sub.add_parser(
+        "mp-dossier",
+        help=(
+            "Generate a Markdown briefing for a single MP — every question "
+            "they asked in the corpus, grouped by topic, with response-label "
+            "distribution and excerpts of evasion text. Reads structured "
+            "fields from answers.jsonl (v0.6.5+) and discourse labels from "
+            "analysis_discourse.jsonl. Output: mp_dossiers/<slug>.md"
+        ),
+    )
+    dossier.add_argument("--out", required=True, help="Corpus directory")
+    dossier.add_argument(
+        "--entity-id",
+        help="Stable entity_id from entities/people.jsonl (preferred when known).",
+    )
+    dossier.add_argument(
+        "--name",
+        help="Loose-match MP name (case-insensitive substring; surname-aware).",
+    )
+    dossier.add_argument(
+        "--topic",
+        help="Topic profile JSON (recorded in dossier provenance).",
+    )
+    dossier.set_defaults(func=mp_dossier_cmd)
 
     parse = sub.add_parser("parse")
     parse.add_argument("--topic", required=True)
