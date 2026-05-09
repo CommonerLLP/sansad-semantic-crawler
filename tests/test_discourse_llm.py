@@ -27,7 +27,6 @@ from sansad_semantic_crawler.discourse import (
     CHANNEL_COMMITTEE,
     DISCOURSE_LABEL_DESCRIPTIONS,
     LLM_CLASSIFIER_VERSION,
-    AnalysisStats,
     analyse_discourse,
     classify_response_llm,
 )
