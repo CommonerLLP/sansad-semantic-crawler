@@ -28,6 +28,55 @@ Planned for the next release:
   the LLM tier becoming the default.
 - Hindi-language classification parity.
 
+## [0.6.2] — 2026-05-09
+
+Security follow-up to v0.6.1 addressing two findings from automated
+review of PR #19.
+
+### Fixed (security)
+
+- **P1 (high) — `--llm-block-private` was bypassable via DNS.**
+  `_validate_llm_endpoint` previously only blocked IP literals and a
+  hardcoded set of loopback names. A hostname (e.g.
+  `metadata.attacker.example` resolving to `169.254.169.254`, or
+  `internal.corp.local` resolving to `10.0.0.5`) was waved through.
+  Now when `allow_private=False`, we resolve the hostname via
+  `socket.getaddrinfo` and reject if any returned address is private,
+  loopback, link-local, multicast, reserved, or unspecified. DNS
+  resolution failures also refuse (rather than fall through and let
+  urllib resolve, which would bypass the policy). DNS resolution is
+  skipped when `allow_private=True` so the local-Ollama zero-config
+  path pays no latency cost.
+- **P2 (medium) — `_parse_llm_json` greedy regex broke on multi-object
+  responses.** v0.6.1's `\{.*\}` fix for nested objects created a
+  regression: a response with the answer plus a trailing example
+  (`{"label": "X"} ... {"label": "EXAMPLE"}`) matched from first `{`
+  to last `}` and `json.loads` choked. Replaced with
+  `json.JSONDecoder().raw_decode()` which walks JSON grammar and
+  returns the first valid value, ignoring trailing content.
+
+### Changed
+
+- Style: `tests/test_security_hardening.py` switched from mixed
+  `import unittest` + `from unittest import mock` to
+  `import unittest.mock as mock`.
+- `discourse.py` `except ValueError: pass` got an explanatory comment.
+
+### Tests
+
+243 tests (up from 232).
+
+### Compatibility
+
+Backward compatible. No CLI surface change; no schema change.
+Recommended for any deployment using `--llm-tier --llm-block-private`,
+since the P1 fix closes the DNS bypass that made the flag
+incomplete.
+
+### Pull requests
+
+- [#21] fix: resolve hostnames + balanced JSON parse in LLM tier
+
 ## [0.6.1] — 2026-05-09
 
 Security patch release. Addresses six findings (three high, three
@@ -293,7 +342,8 @@ in v0.6.0) and the legacy crawler download paths.
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.2
 [0.6.1]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.1
 [0.6.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.0
 [0.5.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.5.0
@@ -307,3 +357,4 @@ in v0.6.0) and the legacy crawler download paths.
 [#16]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/16
 [#17]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/17
 [#19]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/19
+[#21]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/21
