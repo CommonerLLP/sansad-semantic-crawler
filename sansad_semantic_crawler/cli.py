@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .aggregations import write_ministry_summary, write_mp_summary
+from .graph import build_graph
 from .answers import extract_answers
 from .atr_linkage import extract_atr_linkages
 from .committees import CommitteeCrawler, resolve_committees
@@ -267,6 +268,14 @@ def question_refine_cmd(args: argparse.Namespace) -> None:
     )
 
 
+def build_graph_cmd(args: argparse.Namespace) -> None:
+    out = Path(args.out)
+    if not out.is_dir():
+        raise SystemExit(f"output directory does not exist: {out}")
+    db_path = Path(args.db) if args.db else None
+    build_graph(out, db_path=db_path, log_fn=print)
+
+
 def parse_cmd(args: argparse.Namespace) -> None:
     topic = load_topic(args.topic, classifier_override=args.classifier)
     rows = parse_corpus(topic, Path(args.out), refresh_text=args.refresh_text)
@@ -433,6 +442,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     atr_link.add_argument("--out", required=True, help="Corpus directory containing manifest.jsonl")
     atr_link.set_defaults(func=extract_atr_linkage_cmd)
+
+    bg = sub.add_parser(
+        "build-graph",
+        help=(
+            "Ingest pipeline outputs (answers.jsonl, analysis_discourse.jsonl, "
+            "entities/people.jsonl, atr_linkage.jsonl) into a single SQLite "
+            "database for fast cross-file queries. Writes graph.db by default. "
+            "Rebuild is skipped automatically if inputs haven't changed."
+        ),
+    )
+    bg.add_argument("--out", required=True, help="Corpus directory containing pipeline outputs")
+    bg.add_argument("--db", help="Path for the SQLite database (default: <out>/graph.db)")
+    bg.set_defaults(func=build_graph_cmd)
 
     mp_sum = sub.add_parser(
         "mp-summary",
