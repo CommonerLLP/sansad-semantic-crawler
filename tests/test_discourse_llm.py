@@ -240,12 +240,17 @@ class AnalyseDiscourseWithLlmTierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
             # Text that won't match any regex pattern → UNCLASSIFIED from Tier 1
+            # Must avoid: scheme launch language, factual disclosure keywords,
+            # and all evasion patterns. The phrase below describes an ongoing
+            # administrative process without any of the canonical evasion/factual
+            # markers.
             _write_answers(out, [{
                 "key": "k1",
                 "kind": "qa_response",
                 "answer_text": (
-                    "The Aspirational Districts Programme was launched in January 2018 "
-                    "covering 112 districts across 28 States and Union Territories."
+                    "The review committee submitted its interim findings to the "
+                    "Ministry during the quarterly monitoring cycle; the matter is "
+                    "being taken up in the next coordination meeting."
                 ),
             }])
             stats = analyse_discourse(
