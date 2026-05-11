@@ -1,6 +1,6 @@
 [project]
 name = "sansad-semantic-crawler"
-version = "1.0.0"
+version = "1.1.0"
 description = "Config-driven semantic crawler for Indian Parliament (Lok Sabha + Rajya Sabha) questions."
 readme = "README.md"
 requires-python = ">=3.10"
