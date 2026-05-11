@@ -34,7 +34,7 @@ jobs:
       - name: Version consistency check
         run: |
           PKG=$(grep '^version' pyproject.toml | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-          INIT=$(grep '__version__' sansad_semantic_crawler/__init__.py | sed 's/.*= *"\(.*\)"/\1/')
+          INIT=$(grep '^__version__' sansad_semantic_crawler/__init__.py | sed 's/.*= *"\(.*\)"/\1/')
           echo "pyproject.toml: $PKG  __init__.py: $INIT"
           [ "$PKG" = "$INIT" ] || { echo "Version mismatch"; exit 1; }
 
