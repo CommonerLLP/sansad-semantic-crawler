@@ -26,7 +26,7 @@ import socket
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib import request as _url_request
@@ -250,7 +250,7 @@ _ANSWER_ROLE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _read_jsonl(path: Path) -> list[dict]:
