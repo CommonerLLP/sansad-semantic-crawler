@@ -28,9 +28,15 @@ import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+try:
+    from importlib.metadata import version as _importlib_version
+    TOOL_VERSION = _importlib_version("sansad-semantic-crawler")
+except Exception:
+    TOOL_VERSION = "0.0.0"
 
 # Substrings that, when present in a dict-key (case-insensitive), trigger
 # redaction in `_redact()` before the value is written to the runlog.
@@ -43,10 +49,6 @@ from typing import Any
 _REDACT_SUBSTRINGS: frozenset[str] = frozenset({
     "key", "secret", "token", "password", "auth", "bearer", "credential",
 })
-
-# Tool version pinned here rather than imported to keep this module
-# zero-dependency. Bump in lockstep with pyproject.toml.
-TOOL_VERSION = "0.6.5"
 
 
 def _now() -> str:

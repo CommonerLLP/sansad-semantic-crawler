@@ -30,17 +30,17 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
 from .textparse import extract_pdf_text, read_jsonl
 
-EXTRACTOR_VERSION = "regex_v1"
+EXTRACTOR_VERSION = "answers_regex_v1"
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _clean(text: str) -> str:
