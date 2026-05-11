@@ -9,6 +9,28 @@ The full GitHub release notes live at
 is the single canonical timeline for `requirements.txt` consumers and for
 researchers who pin a tag and want to know what they are pinning to.
 
+## [1.1.0] — 2026-05-11
+
+### Added
+
+- **SQLite graph layer** (`graph.py`, `sansad build-graph`): zero-dependency
+  read index over the JSONL pipeline outputs (`answers.jsonl`,
+  `analysis_discourse.jsonl`, `entities/people.jsonl`, `atr_linkage.jsonl`).
+  SHA-256 hash-based idempotency — rebuild is skipped if inputs are unchanged.
+  Schema: `entities`, `memberships`, `questions`, `classifications`,
+  `atr_linkages`, `_meta`. Indexed on `ministry`, `asker_key`, `house`,
+  `label`, `entity name`. (#34)
+
+- **Regex_v2 coverage expansion** (`discourse.py`): 12 new patterns mined from
+  Azad corpus UNCLASSIFIED records. Coverage on the Azad
+  (affirmative-action) corpus: 28% → 91.4%. New patterns across `ABSORBED`,
+  `FEDERAL_DEFLECTION`, `SUBSTITUTED`, and `SCOPE_NARROWED` labels.
+  12 new test cases added. (#33)
+
+### Tests
+
+369 passing, 1 skipped (up from 355 at v1.0.0).
+
 - **Schema change:** Renamed `political_function` field to `audit_description` in `analysis_discourse.jsonl` to align with the systemic audit framing.
 - **Terminological Reframing:** Retired "Technical Sovereignty" in favor of "Analytical Debt" and "Technical Maturity".
 - **Toning Down Performance:** Reframed "Reconstructive Audit" to "Systemic Audit" and removed performative ambedkarite language from code comments and dossier headers.
