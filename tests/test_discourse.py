@@ -276,3 +276,126 @@ class AnalyseDiscourseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class NewRegexV2PatternsTest(unittest.TestCase):
+    """Tests for new regex_v2 patterns mined from Azad corpus UNCLASSIFIED records."""
+
+    def test_instruments_issued_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "As per the instructions issued by DoPT, each Ministry/Department "
+            "is required to appoint an officer not below the rank of Deputy Secretary "
+            "as Liaison Officer for SC/ST and OBC.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_government_enacted_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "The Government enacted Rights of Persons with Disabilities (RPwD) Act, "
+            "2016 which came into force on 19.04.2017.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_section_of_act_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "Section 34 of the RPWD Act 2016 provides for 4 percent reservation "
+            "in the government employment to persons with benchmark disabilities.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_continuous_process_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "Occurrence and filling of vacancies is a continuous process. "
+            "Instructions have been issued to all Ministries/Departments.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_state_subject_fires_federal_deflection(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "Whereas Land is a state subject, several states have state specific "
+            "Land Revenue Codes and rules which provide for the protection of "
+            "land rights of marginalized communities.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "FEDERAL_DEFLECTION")
+
+    def test_concurrent_list_fires_federal_deflection(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "Education is a subject in the Concurrent List of the Constitution. "
+            "Schools, other than those owned by the Central Government, are under "
+            "the jurisdiction of the respective State Governments.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "FEDERAL_DEFLECTION")
+
+    def test_governing_body_fires_representational_silence(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "There are 16 Deans working in the University who are appointed from "
+            "among the faculties. Members of the governing body are as follows.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "REPRESENTATIONAL_SILENCE")
+
+    def test_annexure_reference_fires_substituted(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "The details of Departments of 63 Lateral Entry officers and their "
+            "positions are enclosed at Annexure-I.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "SUBSTITUTED")
+
+    def test_autonomous_institution_fires_scope_narrowed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "Indian Institutes of Technology (IITs) are autonomous Institutions "
+            "governed by Institute of Technology Act, 1961 and the statutes framed "
+            "thereunder.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "SCOPE_NARROWED")
+
+    def test_scheme_launch_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "The Nai Roshni Scheme, a Leadership Development Programme for "
+            "Minority Women was launched in 2012-13 with an objective to empower "
+            "and instill confidence among minority women.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_niti_aayog_reference_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "NITI Aayog, in its three year Action Agenda, and the Sectoral Group "
+            "of Secretaries recommended for induction of personnel in the middle "
+            "and senior management level.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")
+
+    def test_central_sector_scheme_fires_absorbed(self):
+        from sansad_semantic_crawler.discourse import CHANNEL_QA
+        result = classify_response(
+            "The Pradhan Mantri Virasat Ka Samvardhan (PM VIKAS) is a Central "
+            "Sector Scheme focusing on the socio-economic empowerment of six "
+            "notified minorities through skill development.",
+            channel=CHANNEL_QA,
+        )
+        self.assertEqual(result.label, "ABSORBED")

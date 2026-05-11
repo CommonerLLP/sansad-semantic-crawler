@@ -126,9 +126,13 @@ _FEDERAL_DEFLECTION = _LabelDef(
     "Uses federalism/State Subjects to dodge Central responsibility for national standards.",
     _compile([
         r"library\s+is\s+a\s+state\s+subject",
-        r"primarily\s+the\s+responsibility\s+of\s+(?:the\s+)?state\s+government",
-        r"(?:state|respective)\s+governments?\s+(?:are|is)\s+responsible",
-        r"central\s+government\s+only\s+(?:supplements|supports)",
+        # Broader state-subject dodge pattern (mined from Azad corpus UNCLASSIFIED)
+        r"\b(?:is|are)\s+(?:a|an)\s+[Ss]tate\s+[Ss]ubject\b",
+        r"\b(?:Concurrent|[Cc]oncurrent)\s+[Ll]ist\b",
+        r"\bunder\s+entry\s+\d+\s+of\s+the\s+[Ss]tate\s+List\b",
+        r"\bSeventh\s+Schedule\b",
+        r"\b(?:matter|subject|issues?)\s+(?:are|is).{0,80}\bconcerned\s+State\b",
+        r"\b(?:matters?|responsibility)\s+of\s+the\s+concerned\s+State\b",
     ]),
     "shared",
 )
@@ -182,6 +186,11 @@ _SUBSTITUTED = _LabelDef(
         r"flagship\s+(?:programme|scheme|initiative)",
         r"\d[\d,]+\s+(?:posts?|positions?|vacancies)\s+(?:have\s+been|were)\s+(?:filled|recruited|appointed)",
         r"(?:under|through)\s+the\s+(?:scheme|initiative|programme)\s+of",
+        # Annexure/substitution dodge: when the ministry avoids answering by
+        # pointing to a tabular attachment.
+        r"(?:are|is|enclosed|placed|annexed|provided|given)\s+at\s+Annexures?\s*[-:\u2013]?",
+        r"\bddetails?\\?s?\s+(?:are|is)\s+(?:at|in|as)\s+Annexures?\b",
+        r"\b(?:laid|tabled|tabled on)\s+on\s+the\s+Table\s+of\s+the\s+House",
     ]),
     "shared",
 )
@@ -212,7 +221,30 @@ _ABSORBED = _LabelDef(
         r"(?:recommendation|observation)\s+(?:has\s+been|is)\s+noted",
         r"noted\s+for\s+(?:future\s+)?(?:compliance|guidance|reference)",
         r"(?:ministry|department)\s+(?:agrees\s+with|appreciates)\s+the\s+(?:concern|sentiment|spirit)",
-        r"in\s+(?:the\s+)?spirit\s+of\s+the\s+recommendation",
+        r"(?:ministry|department)\s+takes\s+(?:due\s+)?note\s+of",
+        r"(?:matter|issue)\s+is\s+under\s+(?:active\s+)?consideration",
+        r"has\s+taken\s+cognizance\s+of",
+        r"is\s+a\s+continuous\s+process\b",
+        # List-existing-instrument deflection: cites a scheme/act/instruction to
+        # substitute for a concrete answer. Empirically mined from UNCLASSIFIED
+        # records where the ministry recites programme boilerplate instead of
+        # addressing the specific question.
+        r"\bextant\s+instructions\b",
+        r"\bNITI\s+Aayog\b",
+        r"\binsufficient\s+data\s+available\b",
+        r"\binsufficient\s+evidence\b",
+        r"\bvide\s+O\.?M\.?\b",
+        r"\bLiaison\s+Officer\b",
+        r"\bpost-based\s+reservation\s+roster\b",
+        r"\bRecruitment\s+Rules\b",
+        r"\b(?:The\s+)?Government\s+enacted\b",
+        r"\b(?:Government|Govt)\s+has\s+notified\b",
+        r"\bGovernment\s+has\s+entrusted\b",
+        r"\bhas\s+been\s+enacted\b",
+        r"\b(?:Section|Article)\s+\d+\s+of\s+the\s+\w+",
+        r"\b(?:central|centrally\s+funded)\s+(?:sector\s+)?scheme\b",
+        r"\b(?:has\s+been|was|has|is)\s+(?:launched|introduced|notified|discontinued|implemented|operationalised)",
+        r"\bhas\s+(?:submitted|referred|forwarded|recommended|informed)\b",
     ]),
     "shared",
 )
@@ -267,6 +299,13 @@ _SCOPE_NARROWED = _LabelDef(
         r"(?:so\s+far\s+as|in\s+so\s+far\s+as)\s+(?:this|the)\s+(?:ministry|department)\s+is\s+concerned",
         r"does\s+not\s+(?:fall|come)\s+(?:within|under)\s+the\s+(?:purview|jurisdiction)",
         r"(?:matter|subject)\s+(?:pertains|relates)\s+to\s+(?:state|respective)\s+(?:governments?|authorities)",
+        # State-subject dodge (broader than library-specific pattern)
+        r"\b(?:is|are)\s+(?:the\s+)?(responsibility|domain|responsibility)\s+of\s+(?:the\s+)?(state|respective)\s+(governments?|authorities)\b",
+        # Statutory-autonomy dodge
+        r"\b(?:autonomous|statutory)\s+(?:bodies?|institutions?|organizations?|institutes?)\b",
+        r"\b(?:autonomously|independently)\s+governed\b",
+        r"\bgoverned\s+by\s+the\s+\w+\s+Act\b",
+        r"\bunder\s+the\s+(?:purview|administrative\s+control)\s+of\b",
     ]),
     "qa",
 )
