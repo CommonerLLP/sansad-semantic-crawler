@@ -48,6 +48,10 @@ public-interest research; commercial use is not permitted (see
   when `pdftotext` is unavailable.
 - Classifies every record with one of four modes: deterministic regex
   rules, embedding-anchor similarity, LLM JSON tagging, or an ensemble.
+- **SQLite Graph Layer.** Ingests all pipeline outputs (`answers.jsonl`,
+  `analysis_discourse.jsonl`, `entities/people.jsonl`, `atr_linkage.jsonl`)
+  into a single SQLite database for fast cross-file queries and graph
+  navigation. Rebuilds are skipped automatically if inputs are unchanged.
 - **Audit Generators.** CLI subcommands (`mp-dossier`, `ministry-dossier`)
   that produce Markdown-based briefings and audit reports, quantifying
   data omission rates and institutional default status.
@@ -82,20 +86,20 @@ The package is not on PyPI yet (publication is planned for a future
 release). Install directly from the GitHub release tag:
 
 ```bash
-pip install "sansad-semantic-crawler @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
+pip install "sansad-semantic-crawler @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
 
 # Optional extras (pick what you need):
-pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
-pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
-pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
-pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
-pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0"
+pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
 ```
 
 For a project, pin the same line in your `requirements.txt`:
 
 ```text
-sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.0.0
+sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0
 ```
 
 There are zero required third-party dependencies. The crawler runs on a
@@ -107,8 +111,10 @@ clean Python 3.10+ install and falls back to `urllib` for HTTP and to
 ```bash
 # Core Pipeline
 sansad-crawl crawl             # Fetch metadata and PDFs
+sansad-crawl crawl-committees  # Crawl standing-committee reports
 sansad-crawl parse             # Extract and classify text
 sansad-crawl export            # Aggregate for sites
+sansad-crawl build-graph       # Ingest pipeline outputs into SQLite
 
 # Audit Subcommands
 sansad-crawl extract-atr-linkage  # Map ATRs to original reports
@@ -161,7 +167,7 @@ verify which topic-profile bytes produced a record, look up its run.
 ## Status
 
 The full per-release timeline lives in [CHANGELOG.md](CHANGELOG.md).
-This is the **1.0.0** release.
+This is the **1.1.0** release.
 
 ## Licence
 

@@ -13,7 +13,7 @@ researchers who pin a tag and want to know what they are pinning to.
 
 ### Added
 
-- **SQLite graph layer** (`graph.py`, `sansad build-graph`): zero-dependency
+- **SQLite graph layer** (`graph.py`, `sansad-crawl build-graph`): zero-dependency
   read index over the JSONL pipeline outputs (`answers.jsonl`,
   `analysis_discourse.jsonl`, `entities/people.jsonl`, `atr_linkage.jsonl`).
   SHA-256 hash-based idempotency — rebuild is skipped if inputs are unchanged.
@@ -31,10 +31,23 @@ researchers who pin a tag and want to know what they are pinning to.
 
 369 passing, 1 skipped (up from 355 at v1.0.0).
 
+### Pull requests
+
+- [#33] feat: Regex_v2 coverage expansion
+- [#34] feat: SQLite graph layer
+
+## [1.0.0] — 2026-05-10
+
+### Changed
+
 - **Schema change:** Renamed `political_function` field to `audit_description` in `analysis_discourse.jsonl` to align with the systemic audit framing.
 - **Terminological Reframing:** Retired "Technical Sovereignty" in favor of "Analytical Debt" and "Technical Maturity".
 - **Toning Down Performance:** Reframed "Reconstructive Audit" to "Systemic Audit" and removed performative ambedkarite language from code comments and dossier headers.
+
+### Added
+
 - **v1.0.0 Synthesis:** Technical completion of ATR Linkage Engine and functional instrumentation of Constitutional Audit Pipeline.
+
 
 ### What ships: The Audit Pipeline
 
@@ -554,7 +567,10 @@ between `discourse.py` and `classifiers/llm.py`, hand-pinned
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v1.1.0
+[1.0.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v1.0.0
+[0.6.6]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.6
 [0.6.5]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.5
 [0.6.4]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.4
 [0.6.3]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.3
