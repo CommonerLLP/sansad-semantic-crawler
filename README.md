@@ -1,37 +1,19 @@
 # Sansad Semantic Crawler
 
-A self-contained, config-driven crawler for Indian Parliament — questions
+A self-contained, config-driven crawler for the Indian Parliament — questions
 in Lok Sabha and Rajya Sabha, and standing-committee reports — across
-arbitrary topics. The package knows the Lok Sabha DSpace API
-(`elibrary.sansad.in`), the Rajya Sabha question API (`rsdoc.nic.in`),
-and the LS/RS committee-report APIs on `sansad.in`; the *topic logic* —
-what to search for, what to tag, what to keep — lives in JSON profiles,
+topics. The package knows what to search for, what to tag, and what to keep — lives in JSON profiles,
 so other projects can add or extend subjects without editing crawler
-code.
+code. The tool's primary users are researchers building topic-specific corpora
+of parliamentary text. It is not a watchdog, a summariser, or a search engine.
 
-A topic profile is not a neutral filter. It is a theory of how Parliament
-speaks about a subject — which words show up, which ministries field the
-question, which language the analysis is conducted in. The crawler treats
-profiles as such: each crawl run hashes the profile and writes the hash
-alongside the records it produced, so a record cannot be read apart from
-the apparatus that produced it.
-
-The package was extracted from
-[whoseuniversity.org](https://whoseuniversity.org/)'s parliamentary
-research pipeline. It is shared as a public good for civic-tech and
-public-interest research; commercial use is not permitted (see
-[Licence](#licence) below).
 
 ## What it does
 
 - Crawls Lok Sabha questions from `elibrary.sansad.in`.
 - Crawls Rajya Sabha questions from `rsdoc.nic.in`.
-- Crawls standing-committee reports from `sansad.in/api_ls/committee/`
-  and `sansad.in/api_rs/committee/` (16 LS DRSCs + 8 RS DRSCs). Records
-  carry a `kind: "committee_report"` field, distinguish original reports
-  from Action-Taken Reports (`report_type`), and surface where the report
-  has been laid (`presented_via`: `speaker_only` / `ls_only` / `rs_only` /
-  `both_houses`) — these are political distinctions, not metadata.
+- Crawls standing-committee reports from 16 LS DRSCs + 8 RS DRSCs.
+Offers the following analytical support:
 - **ATR Linkage Engine.** Automatically links Action Taken Reports back to
   original committee recommendations based on title citations, closing the
   accountability loop between instructions and executive action.
@@ -44,28 +26,12 @@ public-interest research; commercial use is not permitted (see
   additive surface-analysis fields describing *how* the response is
   written: `voice` (`active` / `passive` / `mixed`), `passive_ratio`,
   `agent_named`, and `agent_terms`.
-- Normalises every house and every kind into one JSONL manifest with a
-  stable composite key, so re-running the crawler resumes cleanly from
-  where it left off.
-- Optionally downloads each answer's or report's PDF.
-- Extracts text from PDFs with `pdftotext -layout` (preferred for
-  layout-heavy parliamentary tables), falling back to `pdfminer.six`
-  when `pdftotext` is unavailable.
-- Classifies every record with one of four modes: deterministic regex
-  rules, embedding-anchor similarity, LLM JSON tagging, or an ensemble.
-- **SQLite Graph Layer.** Ingests all pipeline outputs (`answers.jsonl`,
-  `analysis_discourse.jsonl`, `entities/people.jsonl`, `atr_linkage.jsonl`)
+- **Graph Analyses.** Ingests all pipeline outputs
   into a single SQLite database for fast cross-file queries and graph
-  navigation. Rebuilds are skipped automatically if inputs are unchanged.
+  navigation.
 - **Audit Generators.** CLI subcommands (`mp-dossier`, `ministry-dossier`)
   that produce Markdown-based briefings and audit reports, quantifying
   data omission rates and institutional default status.
-- Writes one record to `_runs.jsonl` per crawl invocation containing the
-  topic-profile content hash, classifier mode, scope, and counts. Records
-  carry a `run_id` linking them back; the categorical apparatus and the
-  data it produced are inseparable.
-- Exports a reusable summary as JSON or as a browser-ready
-  `window.<NAME>` JS file for static sites.
 
 ## What this is — and isn't
 
@@ -80,10 +46,6 @@ outputs is not the same as comprehension of them.
 - **Instrumented, not authoritative.** The classification labels are
   technical hypotheses based on linguistic patterns of institutional
   evasion. They are a triage signal for researchers, not a verdict.
-
-The tool's primary users are researchers building topic-specific corpora
-of parliamentary text, and the static-site builders that present those
-corpora. It is not a watchdog, a summariser, or a search engine.
 
 ## Semantic analyses
 
