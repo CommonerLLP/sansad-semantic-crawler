@@ -27,14 +27,18 @@ researchers who pin a tag and want to know what they are pinning to.
   `FEDERAL_DEFLECTION`, `SUBSTITUTED`, and `SCOPE_NARROWED` labels.
   12 new test cases added. (#33)
 
+- **Security policy** (`SECURITY.md`): disclosure process, supported-version
+  policy, and package security scope for the public repo. (#39)
+
 ### Tests
 
-369 passing, 1 skipped (up from 355 at v1.0.0).
+381 passing, 1 skipped (up from 355 at v1.0.0).
 
 ### Pull requests
 
 - [#33] feat: Regex_v2 coverage expansion
 - [#34] feat: SQLite graph layer
+- [#39] chore: add SECURITY.md
 
 ## [1.0.0] — 2026-05-10
 
