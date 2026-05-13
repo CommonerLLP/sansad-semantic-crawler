@@ -298,16 +298,17 @@ def write_ministry_summary(
             "records_total": 0,
             "label_distribution": Counter(),
             "rejected_recommendation_keys": [],
+            "voice_rows": 0,
+            "passive_ratio_sum": 0.0,
+            "agent_named_rows": 0,
         }
 
     for rec in manifest:
         stats.records_processed += 1
         kind = rec.get("kind") or ""
         key = rec.get("key", "")
-        labels_for_record = [
-            d.get("label") or "UNCLASSIFIED"
-            for d in discourse_by_key.get(key, [{"label": "UNCLASSIFIED"}])
-        ]
+        rows_for_record = discourse_by_key.get(key, [{"label": "UNCLASSIFIED"}])
+        labels_for_record = [d.get("label") or "UNCLASSIFIED" for d in rows_for_record]
 
         if kind == "qa":
             ministry = rec.get("ministry")
@@ -315,8 +316,13 @@ def write_ministry_summary(
                 continue
             g = qa_groups.setdefault(ministry, _new_group("ministry", ministry))
             g["records_total"] += 1
-            for lab in labels_for_record:
+            for d, lab in zip(rows_for_record, labels_for_record):
                 g["label_distribution"][lab] += 1
+                if d.get("passive_ratio") is not None:
+                    g["voice_rows"] += 1
+                    g["passive_ratio_sum"] += float(d.get("passive_ratio") or 0.0)
+                    if d.get("agent_named"):
+                        g["agent_named_rows"] += 1
         elif kind == "committee_report":
             slug = rec.get("committee_slug")
             if not slug:
@@ -326,8 +332,13 @@ def write_ministry_summary(
             g = cm_groups.setdefault(group_key, _new_group("committee_slug", slug))
             g.setdefault("house", house_prefix)
             g["records_total"] += 1
-            for lab in labels_for_record:
+            for d, lab in zip(rows_for_record, labels_for_record):
                 g["label_distribution"][lab] += 1
+                if d.get("passive_ratio") is not None:
+                    g["voice_rows"] += 1
+                    g["passive_ratio_sum"] += float(d.get("passive_ratio") or 0.0)
+                    if d.get("agent_named"):
+                        g["agent_named_rows"] += 1
                 if lab == "REJECTED":
                     g["rejected_recommendation_keys"].append(key)
 
@@ -347,8 +358,14 @@ def write_ministry_summary(
                 for l in _EVASIVE:
                     if labels.get(l):
                         per_evasion_share[l] = round(labels[l] / evasive, 4)
+            voice_rows = grp.get("voice_rows") or 0
+            mean_passive_ratio = round((grp["passive_ratio_sum"] / voice_rows), 4) if voice_rows else None
+            agent_named_rate = round((grp["agent_named_rows"] / voice_rows), 4) if voice_rows else None
             row = {
-                **{k: v for k, v in grp.items() if k != "label_distribution"},
+                **{
+                    k: v for k, v in grp.items()
+                    if k not in {"label_distribution", "voice_rows", "passive_ratio_sum", "agent_named_rows"}
+                },
                 "label_distribution": dict(labels),
                 "records_classified": classified,
                 "records_unclassified": unclassified,
@@ -356,6 +373,8 @@ def write_ministry_summary(
                 "evasive_count": evasive,
                 "evasion_rate_classified": evasion_rate,
                 "per_evasion_label_share": per_evasion_share,
+                "mean_passive_ratio": mean_passive_ratio,
+                "agent_named_rate": agent_named_rate,
                 "topic_hash": th,
                 "computed_at": _now(),
                 "method": AGGREGATION_VERSION,

@@ -489,6 +489,17 @@ class DiscourseClassification:
         return asdict(self)
 
 
+@dataclass
+class DiscourseSurfaceAnalysis:
+    voice: str
+    passive_ratio: float
+    agent_named: bool
+    agent_terms: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def _empty_classification(channel: str, reason: str = "") -> DiscourseClassification:
     return DiscourseClassification(
         label="UNCLASSIFIED",
@@ -496,6 +507,105 @@ def _empty_classification(channel: str, reason: str = "") -> DiscourseClassifica
         matched_pattern="",
         audit_description=reason or "No pattern matched. Candidate for LLM-tier review.",
         channel=channel,
+    )
+
+
+_VOICE_AGENT_RE = re.compile(
+    r"\b(?:the\s+)?(?:"
+    r"ministry(?:\s+of\s+[A-Z][A-Za-z,&\-\s]+)?|"
+    r"department(?:\s+of\s+[A-Z][A-Za-z,&\-\s]+)?|"
+    r"central\s+government|government\s+of\s+india|government|"
+    r"minister|committee|"
+    r"university\s+grants\s+commission|ugc|"
+    r"niti\s+aayog|"
+    r"foundation"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_VOICE_ACTIVE_RE = re.compile(
+    r"\b(?:the\s+)?(?:"
+    r"ministry(?:\s+of\s+[A-Z][A-Za-z,&\-\s]+)?|"
+    r"department(?:\s+of\s+[A-Z][A-Za-z,&\-\s]+)?|"
+    r"central\s+government|government\s+of\s+india|government|"
+    r"minister|committee|"
+    r"university\s+grants\s+commission|ugc|"
+    r"niti\s+aayog|"
+    r"foundation"
+    r")\b.{0,80}?\b(?:"
+    r"has|have|had|will|shall|does|do|is|are|"
+    r"agrees?|appreciates?|takes?|reiterates?|supplements?|provides?|"
+    r"launch(?:es|ed)?|states?|informs?|approves?|allocates?|releases?|"
+    r"decides?|notes?|considers?|examines?|reviews?|"
+    r"sets?\s+up|establish(?:es|ed)|starts?|issues?|notifies?"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_VOICE_PASSIVE_PATTERNS = (
+    re.compile(
+        r"\b(?:has\s+been|have\s+been|had\s+been|is\s+being|are\s+being|"
+        r"was\s+being|were\s+being|is|are|was|were|be|been|being)\s+"
+        r"(?:\w+ed|\w+en|noted|given|taken|made|done|laid|maintained|"
+        r"compiled|collected|provided|sanctioned|approved|issued|"
+        r"notified|considered|examined|reviewed|empowered|designated|"
+        r"started|launched|implemented|set\s+up|carried\s+out)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bit\s+(?:is|was|has\s+been)\s+(?:decided|considered|stated|informed)\b", re.IGNORECASE),
+    re.compile(r"\b(?:matter|issue|recommendation)\s+is\s+under\b", re.IGNORECASE),
+    re.compile(r"\bunder\s+(?:the\s+)?process\s+of\b", re.IGNORECASE),
+    re.compile(r"\bas\s+per\s+(?:scheme|guidelines|rules|norms|instructions)\b", re.IGNORECASE),
+)
+
+
+def analyse_voice_and_agency(text: str) -> DiscourseSurfaceAnalysis:
+    """Estimate grammatical voice and named agency from response text.
+
+    This is an additive heuristic layer: deterministic, dependency-free, and
+    intentionally conservative. It does not try full parsing; it marks the
+    presence of agent-erasing passive / bureaucratic frames alongside named
+    institutional actors.
+    """
+    if not text or not text.strip():
+        return DiscourseSurfaceAnalysis(
+            voice="active",
+            passive_ratio=0.0,
+            agent_named=False,
+            agent_terms=[],
+        )
+
+    agent_terms: list[str] = []
+    seen_terms: set[str] = set()
+    for match in _VOICE_AGENT_RE.finditer(text):
+        term = re.sub(r"\s+", " ", match.group(0).strip())
+        term = re.sub(
+            r"\s+\b(?:has|have|had|will|shall|does|do|is|are)\b.*$",
+            "",
+            term,
+            flags=re.IGNORECASE,
+        ).strip(" ,.;:")
+        key = term.lower()
+        if key not in seen_terms:
+            seen_terms.add(key)
+            agent_terms.append(term)
+
+    active_hits = len(_VOICE_ACTIVE_RE.findall(text))
+    passive_hits = sum(len(pattern.findall(text)) for pattern in _VOICE_PASSIVE_PATTERNS)
+    total_hits = active_hits + passive_hits
+    passive_ratio = round(passive_hits / total_hits, 4) if total_hits else 0.0
+    if passive_hits and active_hits:
+        voice = "mixed"
+    elif passive_hits:
+        voice = "passive"
+    else:
+        voice = "active"
+
+    return DiscourseSurfaceAnalysis(
+        voice=voice,
+        passive_ratio=passive_ratio,
+        agent_named=bool(agent_terms),
+        agent_terms=agent_terms,
     )
 
 
@@ -917,6 +1027,7 @@ def analyse_discourse(
                 if not text.strip():
                     stats.skipped_empty_response += 1
                     continue
+                surface = analyse_voice_and_agency(row.get("answer_body") or text)
                 cls = classify_response(text, CHANNEL_QA)
                 cls = _maybe_llm_upgrade(
                     cls, text, CHANNEL_QA, stats,
@@ -932,6 +1043,7 @@ def analyse_discourse(
                     **common,
                     "kind": "qa_response_analysis",
                     **cls.to_dict(),
+                    **surface.to_dict(),
                     "text_excerpt": text[:200],
                 }
                 # Override classifier field so LLM-upgraded records are traceable.
@@ -945,6 +1057,7 @@ def analyse_discourse(
                 if not text.strip():
                     stats.skipped_empty_response += 1
                     continue
+                surface = analyse_voice_and_agency(text)
                 cls = classify_response(text, CHANNEL_COMMITTEE)
                 cls = _maybe_llm_upgrade(
                     cls, text, CHANNEL_COMMITTEE, stats,
@@ -961,6 +1074,7 @@ def analyse_discourse(
                     "kind": "atr_response_analysis",
                     "recommendation_no": row.get("recommendation_no"),
                     **cls.to_dict(),
+                    **surface.to_dict(),
                     "text_excerpt": text[:200],
                 }
                 rec["classifier"] = cls.classifier
@@ -980,6 +1094,10 @@ def analyse_discourse(
                     "matched_pattern": None,
                     "audit_description": None,
                     "channel": "dfg",
+                    "voice": None,
+                    "passive_ratio": None,
+                    "agent_named": None,
+                    "agent_terms": None,
                 }
                 out_records.append(rec)
                 stats.dfg_passed_through += 1

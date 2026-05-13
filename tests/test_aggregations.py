@@ -161,10 +161,10 @@ class MinistrySummaryTests(unittest.TestCase):
                 {"key": "k4", "kind": "qa", "ministry": "TRIBAL AFFAIRS", "asker_details": [{"name": "D"}], "askers": ["D"]},
             ])
             _write_jsonl(out / "analysis_discourse.jsonl", [
-                {"key": "k1", "label": "ACCEPTED"},
-                {"key": "k2", "label": "DEFLECTED"},
-                {"key": "k3", "label": "SUBSTITUTED"},
-                {"key": "k4", "label": "DATA_WITHHELD"},
+                {"key": "k1", "label": "ACCEPTED", "passive_ratio": 0.0, "agent_named": True},
+                {"key": "k2", "label": "DEFLECTED", "passive_ratio": 1.0, "agent_named": False},
+                {"key": "k3", "label": "SUBSTITUTED", "passive_ratio": 0.5, "agent_named": True},
+                {"key": "k4", "label": "DATA_WITHHELD", "passive_ratio": 1.0, "agent_named": False},
             ])
             stats = write_ministry_summary(out, log_fn=lambda *_: None)
             rows = [json.loads(l) for l in (out / "ministry_summary_qa.jsonl").read_text().splitlines()]
@@ -179,6 +179,8 @@ class MinistrySummaryTests(unittest.TestCase):
         # per_evasion_label_share — half-and-half DEFLECTED / SUBSTITUTED
         self.assertAlmostEqual(finance["per_evasion_label_share"]["DEFLECTED"], 0.5)
         self.assertAlmostEqual(finance["per_evasion_label_share"]["SUBSTITUTED"], 0.5)
+        self.assertAlmostEqual(finance["mean_passive_ratio"], 0.5)
+        self.assertAlmostEqual(finance["agent_named_rate"], 2 / 3, places=3)
 
     def test_committee_aggregation_with_rejected_keys(self):
         with tempfile.TemporaryDirectory() as tmp:

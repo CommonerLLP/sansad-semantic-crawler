@@ -25,6 +25,7 @@ from sansad_semantic_crawler.discourse import (
     CHANNEL_COMMITTEE,
     CHANNEL_QA,
     CLASSIFIER_VERSION,
+    analyse_voice_and_agency,
     analyse_discourse,
     classify_response,
 )
@@ -168,6 +169,41 @@ class UnclassifiedTests(unittest.TestCase):
         self.assertEqual(classify_response(None, CHANNEL_QA).label, "UNCLASSIFIED")
 
 
+class VoiceAndAgencyTests(unittest.TestCase):
+    def test_active_voice_with_named_agent(self):
+        text = (
+            "The Ministry of Culture has approved the proposal and the "
+            "Government has issued revised guidelines."
+        )
+        s = analyse_voice_and_agency(text)
+        self.assertEqual(s.voice, "active")
+        self.assertEqual(s.passive_ratio, 0.0)
+        self.assertTrue(s.agent_named)
+        self.assertIn("The Ministry of Culture", s.agent_terms)
+
+    def test_passive_voice_without_named_agent(self):
+        text = (
+            "The matter is under active consideration. Funds have been "
+            "allocated as per scheme guidelines."
+        )
+        s = analyse_voice_and_agency(text)
+        self.assertEqual(s.voice, "passive")
+        self.assertGreater(s.passive_ratio, 0.5)
+        self.assertFalse(s.agent_named)
+        self.assertEqual(s.agent_terms, [])
+
+    def test_mixed_voice_preserves_named_agent(self):
+        text = (
+            "The Ministry has approved the proposal. The recommendation has "
+            "been noted for future compliance."
+        )
+        s = analyse_voice_and_agency(text)
+        self.assertEqual(s.voice, "mixed")
+        self.assertGreater(s.passive_ratio, 0.0)
+        self.assertLess(s.passive_ratio, 1.0)
+        self.assertTrue(s.agent_named)
+
+
 # ---------------------------------------------------------------------------
 # Corpus dispatcher
 # ---------------------------------------------------------------------------
@@ -188,6 +224,7 @@ class AnalyseDiscourseTests(unittest.TestCase):
                 "key": "LS|U|178|2026-03-17",
                 "kind": "qa_response",
                 "answer_text": "No separate data is maintained at the central level.",
+                "answer_body": "No separate data is maintained at the central level.",
                 "extractor": "regex_v1",
             }])
             stats = analyse_discourse(out, log_fn=lambda *_: None)
@@ -198,6 +235,10 @@ class AnalyseDiscourseTests(unittest.TestCase):
         self.assertEqual(rec["channel"], "qa")
         self.assertEqual(rec["kind"], "qa_response_analysis")
         self.assertEqual(rec["classifier"], CLASSIFIER_VERSION)
+        self.assertEqual(rec["voice"], "passive")
+        self.assertEqual(rec["passive_ratio"], 1.0)
+        self.assertFalse(rec["agent_named"])
+        self.assertEqual(rec["agent_terms"], [])
 
     def test_atr_responses_get_committee_channel_classification(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -216,6 +257,8 @@ class AnalyseDiscourseTests(unittest.TestCase):
         self.assertEqual(rec["channel"], "committee")
         self.assertEqual(rec["recommendation_no"], 1)
         self.assertEqual(rec["kind"], "atr_response_analysis")
+        self.assertEqual(rec["voice"], "passive")
+        self.assertEqual(rec["passive_ratio"], 1.0)
 
     def test_dfg_recommendations_pass_through_with_null_label(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -235,6 +278,10 @@ class AnalyseDiscourseTests(unittest.TestCase):
         self.assertIsNone(rec["label"])
         self.assertEqual(rec["channel"], "dfg")
         self.assertEqual(rec["kind"], "dfg_recommendation_passthrough")
+        self.assertIsNone(rec["voice"])
+        self.assertIsNone(rec["passive_ratio"])
+        self.assertIsNone(rec["agent_named"])
+        self.assertIsNone(rec["agent_terms"])
 
     def test_label_counts_aggregated_in_stats(self):
         with tempfile.TemporaryDirectory() as tmp:
