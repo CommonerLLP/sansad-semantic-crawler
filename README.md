@@ -211,6 +211,55 @@ sansad-crawl analyse-ministry     # Aggregate evasion patterns
 sansad-crawl mp-summary           # Aggregate MP assertion rates
 ```
 
+## Examples
+
+### 1. Minimal crawl -> parse -> export
+
+```bash
+sansad-crawl crawl --topic examples/topics/libraries.json --out out/libraries
+sansad-crawl parse --topic examples/topics/libraries.json --out out/libraries
+sansad-crawl export --topic examples/topics/libraries.json --out out/libraries
+```
+
+Inspect:
+
+- `out/libraries/manifest.jsonl`
+- `out/libraries/analysis.jsonl`
+- `out/libraries/summary.json`
+
+### 2. Response discourse + voice / agency
+
+```bash
+sansad-crawl extract-answers --out out/libraries
+sansad-crawl analyse-discourse --out out/libraries
+```
+
+Inspect:
+
+- `out/libraries/answers.jsonl`
+- `out/libraries/analysis_discourse.jsonl`
+
+`analysis_discourse.jsonl` carries both the discourse label and the
+surface-analysis fields: `voice`, `passive_ratio`, `agent_named`, and
+`agent_terms`.
+
+### 3. SQLite read layer
+
+```bash
+sansad-crawl build-graph --topic examples/topics/libraries.json --out out/libraries
+sqlite3 out/libraries/graph.db "SELECT COUNT(*) FROM records;"
+```
+
+Inspect:
+
+- `out/libraries/graph.db`
+
+For contributor-oriented worked examples, see:
+
+- `examples/workflows/basic-smoke/`
+- `examples/workflows/discourse-smoke/`
+- `examples/workflows/graph-smoke/`
+
 ## Output layout
 
 ```text

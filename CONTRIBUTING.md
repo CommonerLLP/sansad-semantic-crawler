@@ -136,6 +136,26 @@ PRs are merged by the maintainer; please don't merge your own.
   Any change that touches `tag_rules` evaluation requires extra
   scrutiny.
 
+## Examples contract
+
+The user-facing README examples and the contributor-oriented
+`examples/workflows/` subtree are part of the package's public
+interface.
+
+If you change any of the following, update the relevant examples in the
+same PR:
+
+- CLI subcommands or their required flags
+- core output filenames such as `manifest.jsonl`,
+  `analysis.jsonl`, `answers.jsonl`, `analysis_discourse.jsonl`, or
+  `graph.db`
+- the shape of the semantic-analysis layers described in the README
+
+Keep the README examples compact and command-first. Put deeper worked
+examples under `examples/workflows/` so the README stays legible while
+the repository still exposes reproducible interface examples for
+contributors and reviewers.
+
 ## Versioning and releases
 
 The package follows semantic versioning: `MAJOR.MINOR.PATCH`.

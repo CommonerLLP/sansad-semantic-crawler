@@ -84,6 +84,47 @@ class ReadmeOutputContractTests(unittest.TestCase):
         missing = sorted(name for name in expected if name not in README)
         self.assertEqual([], missing)
 
+    def test_readme_mentions_examples_workflow_paths(self):
+        expected = {
+            "examples/workflows/basic-smoke/",
+            "examples/workflows/discourse-smoke/",
+            "examples/workflows/graph-smoke/",
+        }
+        missing = sorted(path for path in expected if path not in README)
+        self.assertEqual([], missing)
+
+
+class ExampleWorkflowContractTests(unittest.TestCase):
+    def test_examples_workflow_index_exists(self):
+        workflow_index = REPO_ROOT / "examples" / "workflows" / "README.md"
+        self.assertTrue(workflow_index.exists(), workflow_index)
+
+    def test_basic_smoke_workflow_files_exist(self):
+        expected = [
+            REPO_ROOT / "examples" / "workflows" / "basic-smoke" / "README.md",
+            REPO_ROOT / "examples" / "workflows" / "basic-smoke" / "manifest.jsonl",
+            REPO_ROOT / "examples" / "workflows" / "basic-smoke" / "analysis.jsonl",
+        ]
+        missing = [str(path.relative_to(REPO_ROOT)) for path in expected if not path.exists()]
+        self.assertEqual([], missing)
+
+    def test_discourse_smoke_workflow_files_exist(self):
+        expected = [
+            REPO_ROOT / "examples" / "workflows" / "discourse-smoke" / "README.md",
+            REPO_ROOT / "examples" / "workflows" / "discourse-smoke" / "answers.jsonl",
+            REPO_ROOT
+            / "examples"
+            / "workflows"
+            / "discourse-smoke"
+            / "analysis_discourse.jsonl",
+        ]
+        missing = [str(path.relative_to(REPO_ROOT)) for path in expected if not path.exists()]
+        self.assertEqual([], missing)
+
+    def test_graph_smoke_workflow_readme_exists(self):
+        graph_readme = REPO_ROOT / "examples" / "workflows" / "graph-smoke" / "README.md"
+        self.assertTrue(graph_readme.exists(), graph_readme)
+
 
 if __name__ == "__main__":
     unittest.main()
