@@ -60,6 +60,10 @@ PUBLIC_PATTERNS: list[tuple[str, str]] = [
     (r"\bdeflection[- ]grammar\b", "internal product vocabulary"),
     (r"\bopposition\s+MP\b", "research-narrative framing"),
     (r"\b(?:the\s+)?analyst(?:'s)?\s+(?:office|reads|applies)", "research-narrative framing"),
+    # Hardcoded personal machine paths. These are never portable and
+    # break on every other developer's machine.
+    (r"/Users/[a-zA-Z0-9_-]+/", "hardcoded user home path"),
+    (r"/Volumes/[a-zA-Z0-9_-]+/", "hardcoded volume path"),
 ]
 
 # Local patterns file path (gitignored).
