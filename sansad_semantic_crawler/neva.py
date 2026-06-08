@@ -17,11 +17,13 @@ Output layout::
 """
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import time
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 from .base import BaseCrawler, now, safe_filename_segment
 from .http_client import make_session
@@ -29,6 +31,30 @@ from .http_client import make_session
 
 NEVA_UA = "sansad-semantic-crawler/1.1.0 (research)"
 CMS_BASE = "https://cms.neva.gov.in"
+
+
+def _load_commoner_probe_neva() -> Any | None:
+    try:
+        return importlib.import_module("commoner_probe.neva")
+    except ModuleNotFoundError as exc:
+        if exc.name not in {"commoner_probe", "commoner_probe.neva"}:
+            raise
+        return None
+
+
+_commoner_neva = _load_commoner_probe_neva()
+USING_COMMONER_PROBE_NEVA = _commoner_neva is not None
+
+
+def _with_crawled_at(record: dict) -> dict:
+    out = dict(record)
+    if "crawled_at" not in out and out.get("probed_at"):
+        out["crawled_at"] = out["probed_at"]
+    return out
+
+
+def _with_crawled_at_rows(records: list[dict]) -> list[dict]:
+    return [_with_crawled_at(record) for record in records]
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +237,7 @@ def _parse_members_html(
 # Crawler
 # ---------------------------------------------------------------------------
 
-class NevaStateCrawler(BaseCrawler):
+class _LocalNevaStateCrawler(BaseCrawler):
     """Crawl one NeVA state assembly portal.
 
     Args:
@@ -662,3 +688,71 @@ class NevaStateCrawler(BaseCrawler):
             self.log(f"  pdf_retry: patched {fixed} records in {jsonl_path.name}")
 
         return fixed
+
+
+if _commoner_neva is not None:
+
+    class NevaStateCrawler(_commoner_neva.StateAssemblyCrawler):
+        """Compatibility wrapper for the commoner-probe NeVA crawler."""
+
+        def __init__(
+            self,
+            portal_code: str,
+            state_code: str,
+            out_dir: Path,
+            *,
+            sleep: float = 0.5,
+        ) -> None:
+            super().__init__(portal_code, state_code, Path(out_dir), sleep=sleep)
+            self.log_path = self.out_dir / "crawl.log"
+            self.session.headers.update({"User-Agent": NEVA_UA})
+
+        def fetch_questions_for_date(
+            self,
+            assembly_no: int,
+            session_code: int,
+            date_id: int,
+            seen: set[str],
+        ) -> list[dict]:
+            return _with_crawled_at_rows(
+                super().fetch_questions_for_date(
+                    assembly_no,
+                    session_code,
+                    date_id,
+                    seen,
+                )
+            )
+
+        def fetch_unlisted_questions(
+            self,
+            assembly_no: int,
+            session_code: int,
+            seen: set[str],
+        ) -> list[dict]:
+            return _with_crawled_at_rows(
+                super().fetch_unlisted_questions(assembly_no, session_code, seen)
+            )
+
+        def fetch_members(self, assembly_no: int) -> list[dict]:
+            return _with_crawled_at_rows(super().fetch_members(assembly_no))
+
+        def fetch_papers_laid(
+            self,
+            assembly_no: int,
+            session_code: int,
+            date_id: int,
+            seen: set[str],
+        ) -> list[dict]:
+            return _with_crawled_at_rows(
+                super().fetch_papers_laid(
+                    assembly_no,
+                    session_code,
+                    date_id,
+                    seen,
+                )
+            )
+
+else:
+
+    class NevaStateCrawler(_LocalNevaStateCrawler):
+        pass
