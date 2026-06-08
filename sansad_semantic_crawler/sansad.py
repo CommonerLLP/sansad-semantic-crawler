@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import importlib
 import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Any, Iterable, Iterator
 from urllib.parse import urlencode
 
 from .http_client import make_session
@@ -27,6 +28,72 @@ RS_HEADERS = {
 }
 
 
+def _load_commoner_probe_sansad() -> Any | None:
+    try:
+        return importlib.import_module("commoner_probe.sansad")
+    except ModuleNotFoundError as exc:
+        if exc.name not in {"commoner_probe", "commoner_probe.sansad"}:
+            raise
+        return None
+
+
+_commoner_sansad = _load_commoner_probe_sansad()
+USING_COMMONER_PROBE_SANSAD = _commoner_sansad is not None
+
+
+class _ProbeTopicAdapter:
+    def __init__(self, topic: TopicProfile) -> None:
+        self._topic = topic
+        self.filter_fn = None
+
+    def __getattr__(self, name: str):
+        return getattr(self._topic, name)
+
+
+def _with_crawled_at(record: dict) -> dict:
+    out = dict(record)
+    if "crawled_at" not in out and out.get("probed_at"):
+        out["crawled_at"] = out["probed_at"]
+    return out
+
+
+def _with_qa_semantics(topic: TopicProfile, record: dict) -> dict | None:
+    out = _with_crawled_at(record)
+    if out.get("kind") != "qa":
+        return out
+    if out.get("house") == "Rajya Sabha":
+        blob = " ".join(
+            str(out.get(key) or "")
+            for key in ("title", "question_text", "answer_text")
+        )
+        semantic = topic.classify(blob)
+        if not semantic["matches"]:
+            return None
+    else:
+        semantic = topic.classify(out.get("title"), out.get("found_via_query"))
+    out.update(semantic)
+    return out
+
+
+class _ClassifierRunLog:
+    def __init__(
+        self,
+        runlog,
+        *,
+        classifier_mode: str,
+        classifier_config: dict[str, Any],
+    ) -> None:
+        self._runlog = runlog
+        self._classifier_mode = classifier_mode
+        self._classifier_config = classifier_config
+
+    def start(self, **kwargs):
+        kwargs.setdefault("classifier_mode", self._classifier_mode)
+        kwargs.setdefault("classifier_config", self._classifier_config)
+        return self._runlog.start(**kwargs)
+
+    def __getattr__(self, name: str):
+        return getattr(self._runlog, name)
 
 
 def stable_key(house: str, qtype: str | None, qno: str | None, date: str | None) -> str:
@@ -64,7 +131,7 @@ def rs_date_iso(value: str | None) -> str:
         return value[:10]
 
 
-class SansadCrawler(BaseCrawler):
+class _LocalSansadCrawler(BaseCrawler):
     def __init__(
         self,
         topic: TopicProfile,
@@ -470,3 +537,94 @@ class SansadCrawler(BaseCrawler):
                 )
         self.runlog.finish(added=added)
         return added
+
+
+if _commoner_sansad is not None:
+
+    class SansadCrawler(_commoner_sansad.SansadProbe):
+        """Compatibility wrapper for the commoner-probe Sansad probe."""
+
+        def __init__(
+            self,
+            topic: TopicProfile,
+            out_dir: Path,
+            *,
+            sleep: float = 0.25,
+            topic_path: Path | str | None = None,
+            classifier_mode: str = "regex",
+            resolver=None,
+        ):
+            self._analysis_topic = topic
+            super().__init__(
+                _ProbeTopicAdapter(topic),
+                Path(out_dir),
+                sleep=sleep,
+                topic_path=topic_path,
+                resolver=resolver,
+            )
+            self.classifier_mode = classifier_mode
+            self.log_path = self.out_dir / "crawl.log"
+            self.runlog = _ClassifierRunLog(
+                self.runlog,
+                classifier_mode=classifier_mode,
+                classifier_config=topic.classifier_config,
+            )
+
+        def append(self, rec: dict) -> None:
+            enriched = _with_qa_semantics(self._analysis_topic, rec)
+            if enriched is not None:
+                super().append(enriched)
+
+        def crawl_ls(
+            self,
+            seen: set[str],
+            *,
+            from_date: str | None,
+            to_date: str | None,
+            qtype_filter: str | None,
+            limit: int | None,
+            max_buckets: int | None,
+            max_records: int | None,
+            download: bool,
+        ) -> int:
+            return super().probe_ls(
+                seen,
+                from_date=from_date,
+                to_date=to_date,
+                qtype_filter=qtype_filter,
+                limit=limit,
+                max_buckets=max_buckets,
+                max_records=max_records,
+                download=download,
+            )
+
+        def crawl_rs(
+            self,
+            seen: set[str],
+            *,
+            sessions: Iterable[int],
+            from_date: str | None,
+            to_date: str | None,
+            qtype_filter: str | None,
+            limit: int | None,
+            max_buckets: int | None,
+            max_records: int | None,
+            download: bool,
+        ) -> int:
+            return _LocalSansadCrawler.crawl_rs(
+                self,
+                seen,
+                sessions=sessions,
+                from_date=from_date,
+                to_date=to_date,
+                qtype_filter=qtype_filter,
+                limit=limit,
+                max_buckets=max_buckets,
+                max_records=max_records,
+                download=download,
+            )
+
+else:
+
+    class SansadCrawler(_LocalSansadCrawler):
+        pass
