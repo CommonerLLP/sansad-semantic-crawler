@@ -185,7 +185,8 @@ python -m sansad_semantic_crawler parse \
 
 ## Dependency boundary
 
-The base install has no required third-party dependencies. Embeddings and
+The base install requires one third-party dependency, `commoner-probe` (the
+acquisition engine and single source of truth for crawling). Embeddings and
 LLM support are optional extras:
 
 ```bash

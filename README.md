@@ -184,9 +184,11 @@ For a project, pin the same line in your `requirements.txt`:
 sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0
 ```
 
-There are zero required third-party dependencies. The crawler runs on a
-clean Python 3.10+ install and falls back to `urllib` for HTTP and to
-`pdftotext` (system binary) for PDF extraction.
+The one required third-party dependency is `commoner-probe` — the
+acquisition engine and single source of truth for crawling. Beyond that the
+package runs on a clean Python 3.10+ install: the optional `[http]`/`[pdf]`
+extras fall back to `urllib` for HTTP and to `pdftotext` (system binary) for
+PDF extraction.
 
 ## Quick start
 
@@ -252,8 +254,10 @@ verify which topic-profile bytes produced a record, look up its run.
 - **Stability and Maturity.** As of v1.0.0, the core schemas and pipeline
   are stable. The tool prioritizes verbatim fidelity in extraction and
   traceability in classification.
-- **No required third-party dependency for crawling.** If `requests` is
-  installed, it is used; otherwise the crawler uses stdlib `urllib`.
+- **Crawling is delegated to `commoner-probe`** — the one required
+  third-party dependency and the single source of truth for acquisition.
+  Other third-party packages (`requests`, `pdfminer.six`, embeddings/LLM)
+  remain optional extras.
 - **`pdfminer.six` is optional.** `pdftotext` (the system binary) is
   preferred because parliamentary PDFs lean heavily on layout for
   tables; `pdfminer.six` is the fallback.

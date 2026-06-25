@@ -5,13 +5,11 @@ import json
 import sys
 import types
 import unittest.mock as mock
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 from typing import Any
-
-import pytest
 
 
 REAL_IMPORT_MODULE = importlib.import_module
@@ -19,14 +17,21 @@ TARGET_MODULE = "sansad_semantic_crawler.sansad"
 
 
 @contextmanager
-def reloaded_sansad(import_module: Callable[[str], ModuleType]) -> Iterator[ModuleType]:
+def reloaded_sansad(probe_class: type) -> Iterator[ModuleType]:
+    """Reload the SSC sansad module with the commoner-probe SansadProbe patched.
+
+    Acquisition is delegated to ``commoner_probe.sansad.SansadProbe`` (a hard
+    dependency). We patch that class to a fake before re-importing the SSC module
+    so ``SansadCrawler`` subclasses the fake; the re-exported helpers continue to
+    resolve from the real ``commoner_probe.sansad`` module.
+    """
     original = sys.modules.pop(TARGET_MODULE, None)
     package = sys.modules.get("sansad_semantic_crawler")
     old_attr = getattr(package, "sansad", None) if package is not None else None
     if package is not None and hasattr(package, "sansad"):
         delattr(package, "sansad")
     try:
-        with mock.patch("importlib.import_module", side_effect=import_module):
+        with mock.patch("commoner_probe.sansad.SansadProbe", probe_class):
             yield REAL_IMPORT_MODULE(TARGET_MODULE)
     finally:
         sys.modules.pop(TARGET_MODULE, None)
@@ -244,12 +249,6 @@ class FakeSansadProbe:
         return 1
 
 
-def _fake_commoner_sansad_module() -> ModuleType:
-    module = types.ModuleType("commoner_probe.sansad")
-    module.SansadProbe = FakeSansadProbe
-    return module
-
-
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [
         json.loads(line)
@@ -259,12 +258,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def test_sansad_delegates_to_commoner_probe_when_available(tmp_path: Path) -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            return _fake_commoner_sansad_module()
-        return REAL_IMPORT_MODULE(name)
-
-    with reloaded_sansad(fake_import_module) as sansad:
+    with reloaded_sansad(FakeSansadProbe) as sansad:
         crawler = sansad.SansadCrawler(
             ContractTopic(),
             tmp_path,
@@ -273,19 +267,13 @@ def test_sansad_delegates_to_commoner_probe_when_available(tmp_path: Path) -> No
             classifier_mode="contract-regex",
         )
 
-        assert sansad.USING_COMMONER_PROBE_SANSAD is True
         assert isinstance(crawler, FakeSansadProbe)
         assert crawler.log_path == tmp_path / "crawl.log"
         assert crawler.topic.filter_fn is None
 
 
 def test_delegated_sansad_ls_keeps_local_semantic_contract(tmp_path: Path) -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            return _fake_commoner_sansad_module()
-        return REAL_IMPORT_MODULE(name)
-
-    with reloaded_sansad(fake_import_module) as sansad:
+    with reloaded_sansad(FakeSansadProbe) as sansad:
         crawler = sansad.SansadCrawler(
             ContractTopic(),
             tmp_path,
@@ -326,12 +314,7 @@ def test_delegated_sansad_ls_keeps_local_semantic_contract(tmp_path: Path) -> No
 def test_sansad_rs_delegates_and_keeps_semantic_contract_when_commoner_probe_available(
     tmp_path: Path,
 ) -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            return _fake_commoner_sansad_module()
-        return REAL_IMPORT_MODULE(name)
-
-    with reloaded_sansad(fake_import_module) as sansad:
+    with reloaded_sansad(FakeSansadProbe) as sansad:
         crawler = sansad.SansadCrawler(
             ContractTopic(),
             tmp_path,
@@ -361,7 +344,7 @@ def test_sansad_rs_delegates_and_keeps_semantic_contract_when_commoner_probe_ava
         "The National Mission on Libraries supports public libraries."
     )
     assert row["found_via_query"] == "Culture"
-    # RS now delegates to commoner-probe (symmetric with LS): the probe's
+    # RS delegates to commoner-probe (symmetric with LS): the probe's
     # `probed_at` is preserved and aliased to `crawled_at`.
     assert row["probed_at"] == "2026-06-02T12:01:00"
     assert row["crawled_at"] == "2026-06-02T12:01:00"
@@ -372,12 +355,7 @@ def test_sansad_rs_delegates_and_keeps_semantic_contract_when_commoner_probe_ava
 def test_sansad_rs_no_match_dropped_by_semantic_filter_when_commoner_probe_available(
     tmp_path: Path,
 ) -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            return _fake_commoner_sansad_module()
-        return REAL_IMPORT_MODULE(name)
-
-    with reloaded_sansad(fake_import_module) as sansad:
+    with reloaded_sansad(FakeSansadProbe) as sansad:
         crawler = sansad.SansadCrawler(
             NoMatchTopic(),
             tmp_path,
@@ -411,39 +389,3 @@ def test_sansad_rs_no_match_dropped_by_semantic_filter_when_commoner_probe_avail
         # run total above and the empty manifest, not the per-bucket numbers.
         assert crawler.runlog.buckets[-1]["no_match"] == 0
         assert crawler.runlog.buckets[-1]["kept"] == 1
-
-
-def test_sansad_falls_back_to_local_crawler_when_commoner_probe_is_absent(
-    tmp_path: Path,
-) -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            raise ModuleNotFoundError(name, name="commoner_probe")
-        return REAL_IMPORT_MODULE(name)
-
-    with reloaded_sansad(fake_import_module) as sansad:
-        crawler = sansad.SansadCrawler(
-            ContractTopic(),
-            tmp_path,
-            sleep=0,
-            classifier_mode="contract-regex",
-        )
-
-        assert sansad.USING_COMMONER_PROBE_SANSAD is False
-        assert crawler.log_path == tmp_path / "crawl.log"
-        assert hasattr(crawler, "crawl_ls")
-        assert hasattr(crawler, "crawl_rs")
-
-
-def test_commoner_probe_internal_import_errors_are_not_silently_hidden() -> None:
-    def fake_import_module(name: str) -> ModuleType:
-        if name == "commoner_probe.sansad":
-            raise ModuleNotFoundError(
-                "No module named 'missing_dependency'",
-                name="missing_dependency",
-            )
-        return REAL_IMPORT_MODULE(name)
-
-    with pytest.raises(ModuleNotFoundError):
-        with reloaded_sansad(fake_import_module):
-            pass
