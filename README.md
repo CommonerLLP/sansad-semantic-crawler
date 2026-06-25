@@ -168,20 +168,20 @@ The package is not on PyPI yet (publication is planned for a future
 release). Install directly from the GitHub release tag:
 
 ```bash
-pip install "sansad-semantic-crawler @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
 
 # Optional extras (pick what you need):
-pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
-pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
-pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
-pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
-pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0"
+pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
 ```
 
 For a project, pin the same line in your `requirements.txt`:
 
 ```text
-sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v1.1.0
+sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0
 ```
 
 The one required third-party dependency is `commoner-probe` — the
@@ -272,7 +272,7 @@ verify which topic-profile bytes produced a record, look up its run.
 ## Status
 
 The full per-release timeline lives in [CHANGELOG.md](CHANGELOG.md).
-The latest published release is **v1.1.0**. `main` may move ahead with
+The latest published release is **v2.0.0**. `main` may move ahead with
 additive features before the next tag; check the changelog's
 `Unreleased` section for post-release work.
 

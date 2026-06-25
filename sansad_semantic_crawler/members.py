@@ -14,3 +14,5 @@ from commoner_probe.members import (  # noqa: F401  (re-export)
     MemberInfo,
     fetch_committee_members,
 )
+
+__all__ = ["MPRoster", "MemberInfo", "fetch_committee_members"]

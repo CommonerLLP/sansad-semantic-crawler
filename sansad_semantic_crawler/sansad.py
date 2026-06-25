@@ -26,7 +26,7 @@ working unchanged.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from commoner_probe.sansad import (  # noqa: F401  (re-export)
     SansadProbe,
@@ -37,7 +37,22 @@ from commoner_probe.sansad import (  # noqa: F401  (re-export)
     stable_key,
 )
 
+from ._probe_compat import ClassifierRunLog as _ClassifierRunLog
+from ._probe_compat import with_crawled_at as _with_crawled_at
 from .topics import TopicProfile
+
+# Public surface: the wrapper plus the acquisition helpers/constants re-exported
+# from commoner-probe so existing ``from sansad_semantic_crawler.sansad import``
+# callers keep working.
+__all__ = [
+    "SansadCrawler",
+    "SansadProbe",
+    "stable_key",
+    "date_in_range",
+    "md_value",
+    "md_values",
+    "rs_date_iso",
+]
 
 
 class _ProbeTopicAdapter:
@@ -47,13 +62,6 @@ class _ProbeTopicAdapter:
 
     def __getattr__(self, name: str):
         return getattr(self._topic, name)
-
-
-def _with_crawled_at(record: dict) -> dict:
-    out = dict(record)
-    if "crawled_at" not in out and out.get("probed_at"):
-        out["crawled_at"] = out["probed_at"]
-    return out
 
 
 def _with_qa_semantics(topic: TopicProfile, record: dict) -> dict | None:
@@ -72,46 +80,6 @@ def _with_qa_semantics(topic: TopicProfile, record: dict) -> dict | None:
         semantic = topic.classify(out.get("title"), out.get("found_via_query"))
     out.update(semantic)
     return out
-
-
-class _ClassifierRunLog:
-    def __init__(
-        self,
-        runlog,
-        *,
-        classifier_mode: str,
-        classifier_config: dict[str, Any],
-        appended_counter=None,
-    ) -> None:
-        self._runlog = runlog
-        self._classifier_mode = classifier_mode
-        self._classifier_config = classifier_config
-        # Optional callable returning the running count of records actually
-        # written to the manifest. Used to correct the per-run `added` total
-        # when acquisition is delegated to commoner-probe: the probe counts at
-        # acquisition time, before SSC's append-time semantic filter runs.
-        self._appended_counter = appended_counter
-        self._appended_at_start = 0
-
-    def start(self, **kwargs):
-        kwargs.setdefault("classifier_mode", self._classifier_mode)
-        kwargs.setdefault("classifier_config", self._classifier_config)
-        if self._appended_counter is not None:
-            self._appended_at_start = self._appended_counter()
-        return self._runlog.start(**kwargs)
-
-    def finish(self, *, added: int) -> None:
-        # When delegating to commoner-probe, the probe's `added` counts rows it
-        # acquired (its filter_fn is nulled by _ProbeTopicAdapter), but SSC's
-        # _with_qa_semantics may drop non-matching rows at append time. Report
-        # the count actually written so the run total matches the local
-        # crawler's contract.
-        if self._appended_counter is not None:
-            added = self._appended_counter() - self._appended_at_start
-        return self._runlog.finish(added=added)
-
-    def __getattr__(self, name: str):
-        return getattr(self._runlog, name)
 
 
 class SansadCrawler(SansadProbe):
@@ -170,7 +138,12 @@ class SansadCrawler(SansadProbe):
         max_records: int | None,
         download: bool,
     ) -> int:
-        return super().probe_ls(
+        # Return the count actually written, mirroring crawl_rs. The LS path
+        # never drops at append time, so this equals the probe's own count
+        # today — but measuring it the same way as crawl_rs keeps the two
+        # houses' return contract consistent.
+        before = self._appended_count
+        super().probe_ls(
             seen,
             from_date=from_date,
             to_date=to_date,
@@ -180,6 +153,7 @@ class SansadCrawler(SansadProbe):
             max_records=max_records,
             download=download,
         )
+        return self._appended_count - before
 
     def crawl_rs(
         self,

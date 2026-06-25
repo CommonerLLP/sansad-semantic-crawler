@@ -245,3 +245,32 @@ def test_delegated_committee_composition_keeps_crawled_at_compatibility(
     row = _read_jsonl(tmp_path / "committee_members.jsonl")[0]
     assert row["probed_at"] == "2026-06-02T12:03:00"
     assert row["crawled_at"] == "2026-06-02T12:03:00"
+
+
+def test_composition_patch_tolerates_malformed_line_and_leaves_no_temp(
+    tmp_path: Path,
+) -> None:
+    with reloaded_committees(FakeCommitteeProbe) as committees:
+        crawler = committees.CommitteeCrawler(
+            ContractTopic(),
+            tmp_path,
+            sleep=0,
+            classifier_mode="contract-regex",
+        )
+        # Seed the append-only manifest with a malformed/legacy line followed by
+        # a valid probed_at row, then run the crawled_at patch directly.
+        crawler.composition_manifest.write_text(
+            "{ not valid json\n"
+            + json.dumps({"committee": "x", "probed_at": "2026-06-02T12:03:00"})
+            + "\n",
+            encoding="utf-8",
+        )
+        crawler._patch_composition_crawled_at()
+
+        lines = crawler.composition_manifest.read_text(encoding="utf-8").splitlines()
+        # Malformed line preserved verbatim (no data loss, no crash) ...
+        assert lines[0] == "{ not valid json"
+        # ... and the valid row gets crawled_at aliased from probed_at.
+        assert json.loads(lines[1])["crawled_at"] == "2026-06-02T12:03:00"
+        # Atomic rewrite leaves no stray temp file behind.
+        assert not (tmp_path / "committee_members.jsonl.tmp").exists()

@@ -20,8 +20,9 @@ unchanged.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from commoner_probe.committees import (  # noqa: F401  (re-export)
     DEFAULT_LOK_SABHA,
@@ -42,14 +43,32 @@ from commoner_probe.committees import (  # noqa: F401  (re-export)
     resolve_committees,
 )
 
+from ._probe_compat import ClassifierRunLog as _ClassifierRunLog
+from ._probe_compat import with_crawled_at as _with_crawled_at
 from .topics import TopicProfile
 
-
-def _with_crawled_at(record: dict) -> dict:
-    out = dict(record)
-    if "crawled_at" not in out and out.get("probed_at"):
-        out["crawled_at"] = out["probed_at"]
-    return out
+# Public surface: the wrapper plus the report helpers/catalogs re-exported from
+# commoner-probe so existing ``from sansad_semantic_crawler.committees import``
+# callers (cli, tests, sister projects) keep working.
+__all__ = [
+    "CommitteeCrawler",
+    "CommitteeProbe",
+    "resolve_committees",
+    "report_key",
+    "_report_type",
+    "_ls_presented_via",
+    "parse_ls_date",
+    "parse_rs_date",
+    "REPORT_TYPE_ACTION_TAKEN",
+    "REPORT_TYPE_BILL",
+    "REPORT_TYPE_DFG",
+    "REPORT_TYPE_OTHER",
+    "REPORT_TYPE_SUBJECT",
+    "REPORT_TYPES_KNOWN",
+    "LS_COMMITTEES",
+    "RS_COMMITTEES",
+    "DEFAULT_LOK_SABHA",
+]
 
 
 def _with_committee_semantics(topic: TopicProfile, record: dict) -> dict:
@@ -57,27 +76,6 @@ def _with_committee_semantics(topic: TopicProfile, record: dict) -> dict:
     if out.get("kind") == "committee_report":
         out.update(topic.classify(out.get("title")))
     return out
-
-
-class _ClassifierRunLog:
-    def __init__(
-        self,
-        runlog,
-        *,
-        classifier_mode: str,
-        classifier_config: dict[str, Any],
-    ) -> None:
-        self._runlog = runlog
-        self._classifier_mode = classifier_mode
-        self._classifier_config = classifier_config
-
-    def start(self, **kwargs):
-        kwargs.setdefault("classifier_mode", self._classifier_mode)
-        kwargs.setdefault("classifier_config", self._classifier_config)
-        return self._runlog.start(**kwargs)
-
-    def __getattr__(self, name: str):
-        return getattr(self._runlog, name)
 
 
 class CommitteeCrawler(CommitteeProbe):
@@ -159,18 +157,27 @@ class CommitteeCrawler(CommitteeProbe):
         path = self.composition_manifest
         if not path.exists():
             return
-        records = []
+        out_lines: list[str] = []
         changed = False
         with path.open(encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue
-                rec = json.loads(line)
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    # Preserve an unparseable/legacy line verbatim rather than
+                    # dropping data; we just can't alias crawled_at onto it.
+                    out_lines.append(line.rstrip("\n"))
+                    continue
                 patched = _with_crawled_at(rec)
                 changed = changed or patched != rec
-                records.append(patched)
+                out_lines.append(json.dumps(patched, ensure_ascii=False))
         if not changed:
             return
-        with path.open("w", encoding="utf-8") as f:
-            for rec in records:
-                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        # Write atomically: a crash mid-write must not truncate the append-only
+        # manifest and lose prior runs' composition rows.
+        tmp = path.with_name(path.name + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write("\n".join(out_lines) + "\n")
+        os.replace(tmp, path)
