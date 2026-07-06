@@ -11,6 +11,32 @@ researchers who pin a tag and want to know what they are pinning to.
 
 ## [Unreleased]
 
+### Added
+
+- **`export` now merges discourse/ministry summaries when present.** `build_summary()`
+  adds `discourseSummary` (corpus-wide evasion-rate rollup) and `ministryDiscourse`
+  (per-ministry rollup from `ministry_summary_qa.jsonl`) to its output whenever
+  `analyse-discourse`/`analyse-ministry` have been run for the corpus — omitted
+  entirely (not zeroed) otherwise. Lets consumers like `theright2read`'s
+  `build_parliament_libraries.py` drop their local re-derivation of the same numbers.
+- **`commoner-analyse export-glossary`** — writes the discourse label taxonomy
+  (label, description, substantive/evasive/unclassified function) as a
+  standalone, corpus-independent JSON/JS artifact. For consumers like
+  `zero-hour` that read generated data across a licensing boundary rather
+  than importing this package, so their copy of the taxonomy can't silently
+  drift the way a hand-copied one did.
+
+### Fixed
+
+- **Evasion-rate undercounting for the "Instrumented Discourse Tier v2" labels.**
+  `CONSTITUTIONAL_DEFAULT`, `FEDERAL_DEFLECTION`, `STRUCTURAL_REFUSAL`, and
+  `REPRESENTATIONAL_SILENCE` were added to the discourse taxonomy in that
+  release but never added to `aggregations.py`'s evasive/substantive
+  classification, so every evasion-rate calculation (`mp_summary.jsonl`,
+  `ministry_summary_qa.jsonl`, `ministry_summary_committee.jsonl`, and now
+  `export`'s `discourseSummary`) silently treated them as unclassified
+  instead of evasive. Found while building the glossary export above.
+
 ## [2.1.0] — 2026-07-06
 
 **Identity migration — `sansad-semantic-crawler` is now `commoner-analyse`.**

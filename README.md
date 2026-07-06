@@ -202,7 +202,8 @@ PDF extraction.
 commoner-analyse crawl             # Fetch metadata and PDFs
 commoner-analyse crawl-committees  # Crawl standing-committee reports
 commoner-analyse parse             # Topic classification -> analysis.jsonl
-commoner-analyse export            # Aggregate for sites
+commoner-analyse export            # Aggregate for sites (merges discourse/ministry summaries when present)
+commoner-analyse export-glossary   # Discourse label taxonomy as standalone JSON/JS data
 commoner-analyse build-graph       # Ingest pipeline outputs into SQLite
 
 # Response / audit pipeline
