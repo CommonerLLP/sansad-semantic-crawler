@@ -34,6 +34,12 @@ _SUBSTANTIVE = frozenset({"ACCEPTED", "REJECTED", "FACTUAL_DISCLOSURE"})
 _EVASIVE = frozenset({
     "DEFLECTED", "ABSORBED", "SUBSTITUTED",
     "DATA_WITHHELD", "SCOPE_NARROWED", "CIRCULAR_REFERENCE",
+    # Instrumented Discourse Tier v2 labels (CHANGELOG "Instrumented
+    # Discourse: v2 Regex Tier") — added to the taxonomy in discourse.py
+    # but never added here, so every evasion-rate calculation silently
+    # treated these as "unclassified" instead of evasive. Fixed 2026-07-06.
+    "CONSTITUTIONAL_DEFAULT", "FEDERAL_DEFLECTION",
+    "STRUCTURAL_REFUSAL", "REPRESENTATIONAL_SILENCE",
 })
 
 AGGREGATION_VERSION = "aggregations_v1"

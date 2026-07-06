@@ -11,7 +11,7 @@ from .atr_linkage import extract_atr_linkages
 from .committees import CommitteeCrawler, resolve_committees
 from .discourse import analyse_discourse
 from .dossier import build_ministry_dossier, build_mp_dossier, build_question_refinement
-from .export import build_summary, write_export
+from .export import build_glossary, build_summary, write_export
 from .neva import NevaStateCrawler
 from .sansad import SansadCrawler
 from .textparse import parse_corpus
@@ -345,6 +345,13 @@ def export_cmd(args: argparse.Namespace) -> None:
     export_path = Path(args.export_path) if args.export_path else out / ("summary.js" if args.format == "js" else "summary.json")
     write_export(data, export_path, fmt=args.format, js_global=args.js_global)
     print(f"wrote {export_path}")
+
+
+def export_glossary_cmd(args: argparse.Namespace) -> None:
+    data = build_glossary()
+    export_path = Path(args.export_path)
+    write_export(data, export_path, fmt=args.format, js_global=args.js_global)
+    print(f"wrote {export_path} ({len(data['labels'])} labels)")
 
 
 def neva_crawl_cmd(args: argparse.Namespace) -> None:
@@ -715,6 +722,20 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--js-global", default="SANSAD_TOPIC_DATA")
     export.add_argument("--max-questions", type=int, default=25)
     export.set_defaults(func=export_cmd)
+
+    export_glossary = sub.add_parser(
+        "export-glossary",
+        help=(
+            "Write the discourse label taxonomy (label, description, "
+            "substantive/evasive/unclassified function) as a standalone "
+            "JSON/JS artifact, corpus-independent, for consumers across a "
+            "licensing boundary that can't import this package directly."
+        ),
+    )
+    export_glossary.add_argument("--export-path", required=True)
+    export_glossary.add_argument("--format", choices=["json", "js"], default="json")
+    export_glossary.add_argument("--js-global", default="COMMONER_ANALYSE_DISCOURSE_GLOSSARY")
+    export_glossary.set_defaults(func=export_glossary_cmd)
 
     neva = sub.add_parser(
         "neva-crawl",
