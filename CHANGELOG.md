@@ -11,19 +11,22 @@ researchers who pin a tag and want to know what they are pinning to.
 
 ## [Unreleased]
 
-## [0.1.0] — 2026-07-06
+## [2.1.0] — 2026-07-06
 
 **Identity migration — `sansad-semantic-crawler` is now `commoner-analyse`.**
-This is a fresh version identity, not a continuation of the `2.0.0` line: the
-repo's actual role has been domain analysis over commoner-probe's acquired
-records since acquisition delegation began, and the name now reflects that —
-this package is the adapter layer for analysing everything `commoner-probe`
-acquires (Sansad Q&A, committees, NeVA state assemblies, bills, debates, and
-more as commoner-probe's acquisition surface grows), not a Sansad-specific
-tool. Package name, import path (`sansad_semantic_crawler` → `commoner_analyse`),
-CLI entry point (`sansad-crawl` → `commoner-analyse`), and repository URL all
-changed together in this release. No compatibility shim for the old name is
-provided — pin `commoner-analyse` going forward.
+The repo's actual role has been domain analysis over commoner-probe's
+acquired records since acquisition delegation began, and the name now
+reflects that — this package is the adapter layer for analysing everything
+`commoner-probe` acquires (Sansad Q&A, committees, NeVA state assemblies,
+bills, debates, and more as commoner-probe's acquisition surface grows), not
+a Sansad-specific tool. Package name, import path (`sansad_semantic_crawler`
+→ `commoner_analyse`), CLI entry point (`sansad-crawl` → `commoner-analyse`),
+and repository URL all changed together in this release. No compatibility
+shim for the old name is provided — pin `commoner-analyse` going forward.
+(Versioned `2.1.0`, continuing this repo's existing tag lineage, rather than
+resetting to `0.1.0` — this repo already has real historical tags at every
+`0.x`/`1.x`/`2.0.0` value from its pre-rename life, so a literal "fresh
+0.1.0" would have collided with and risked overwriting that history.)
 
 ### Changed
 
@@ -628,7 +631,8 @@ between `discourse.py` and `classifiers/llm.py`, hand-pinned
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/commoner-analyse/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/CommonerLLP/commoner-analyse/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/CommonerLLP/commoner-analyse/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/CommonerLLP/commoner-analyse/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v1.0.0
