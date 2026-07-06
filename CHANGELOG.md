@@ -11,6 +11,8 @@ researchers who pin a tag and want to know what they are pinning to.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-07-06
+
 ### Added
 
 - **`export` now merges discourse/ministry summaries when present.** `build_summary()`

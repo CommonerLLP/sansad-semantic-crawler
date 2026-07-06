@@ -173,20 +173,20 @@ The package is not on PyPI yet (publication is planned for a future
 release). Install directly from the GitHub release tag:
 
 ```bash
-pip install "commoner-analyse @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
+pip install "commoner-analyse @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
 
 # Optional extras (pick what you need):
-pip install "commoner-analyse[http] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
-pip install "commoner-analyse[pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
-pip install "commoner-analyse[embeddings] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
-pip install "commoner-analyse[llm] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
-pip install "commoner-analyse[all] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0"
+pip install "commoner-analyse[http] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
+pip install "commoner-analyse[pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
+pip install "commoner-analyse[embeddings] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
+pip install "commoner-analyse[llm] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
+pip install "commoner-analyse[all] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0"
 ```
 
 For a project, pin the same line in your `requirements.txt`:
 
 ```text
-commoner-analyse[http,pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.1.0
+commoner-analyse[http,pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v2.2.0
 ```
 
 The one required third-party dependency is `commoner-probe` — the

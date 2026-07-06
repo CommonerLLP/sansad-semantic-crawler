@@ -1,6 +1,6 @@
 [project]
 name = "commoner-analyse"
-version = "2.1.0"
+version = "2.2.0"
 description = "Domain analysis adapters over commoner-probe's acquired public records: classification, aggregation, dossiers, and cross-referencing."
 readme = "README.md"
 requires-python = ">=3.10"

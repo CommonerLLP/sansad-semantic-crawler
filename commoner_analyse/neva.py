@@ -23,7 +23,7 @@ from commoner_probe.neva import StateAssemblyCrawler
 
 from ._probe_compat import with_crawled_at as _with_crawled_at
 
-NEVA_UA = "commoner-analyse/2.1.0 (research)"
+NEVA_UA = "commoner-analyse/2.2.0 (research)"
 
 
 def _with_crawled_at_rows(records: list[dict]) -> list[dict]:
