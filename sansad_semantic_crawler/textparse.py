@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .manifest_contract import iter_manifest_records
 from .topics import TopicProfile
 
 
@@ -77,7 +78,7 @@ def excerpt(text: str, max_len: int = 280) -> str:
 
 def parse_corpus(topic: TopicProfile, out_dir: Path, *, refresh_text: bool = False) -> list[dict[str, Any]]:
     manifest = out_dir / "manifest.jsonl"
-    records = read_jsonl(manifest)
+    records = list(iter_manifest_records(manifest))
     analysis: list[dict[str, Any]] = []
     log_path = out_dir / "parse.log"
     out_dir.mkdir(parents=True, exist_ok=True)

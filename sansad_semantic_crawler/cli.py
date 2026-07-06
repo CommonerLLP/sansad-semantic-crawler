@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .acquisition_compat import warn_deprecated_acquisition
 from .aggregations import write_ministry_summary, write_mp_summary
 from .graph import build_graph
 from .answers import extract_answers
@@ -11,6 +12,7 @@ from .committees import CommitteeCrawler, resolve_committees
 from .discourse import analyse_discourse
 from .dossier import build_ministry_dossier, build_mp_dossier, build_question_refinement
 from .export import build_summary, write_export
+from .neva import NevaStateCrawler
 from .sansad import SansadCrawler
 from .textparse import parse_corpus
 from .topics import load_topic
@@ -63,6 +65,7 @@ def _build_resolver_if_requested(out_dir: Path, with_entities: bool, log):
 
 
 def crawl_cmd(args: argparse.Namespace) -> None:
+    warn_deprecated_acquisition("crawl", args)
     topic = load_topic(args.topic, classifier_override=args.classifier)
     out = Path(args.out)
     if args.reset and (out / "manifest.jsonl").exists():
@@ -110,6 +113,7 @@ def crawl_cmd(args: argparse.Namespace) -> None:
 
 
 def crawl_committees_cmd(args: argparse.Namespace) -> None:
+    warn_deprecated_acquisition("crawl-committees", args)
     topic = load_topic(args.topic, classifier_override=args.classifier)
     out = Path(args.out)
     if args.reset and (out / "manifest.jsonl").exists():
@@ -341,6 +345,23 @@ def export_cmd(args: argparse.Namespace) -> None:
     export_path = Path(args.export_path) if args.export_path else out / ("summary.js" if args.format == "js" else "summary.json")
     write_export(data, export_path, fmt=args.format, js_global=args.js_global)
     print(f"wrote {export_path}")
+
+
+def neva_crawl_cmd(args: argparse.Namespace) -> None:
+    warn_deprecated_acquisition("neva-crawl", args)
+    assembly_nos = [int(x.strip()) for x in args.assemblies.split(",") if x.strip()]
+    crawler = NevaStateCrawler(
+        args.portal,
+        args.state_code,
+        Path(args.out),
+        sleep=args.sleep,
+    )
+    crawler.run(
+        assembly_nos,
+        download=not args.no_download,
+        fetch_member_details=not args.no_member_details,
+        sessions_limit=args.sessions_limit,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -694,6 +715,23 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--js-global", default="SANSAD_TOPIC_DATA")
     export.add_argument("--max-questions", type=int, default=25)
     export.set_defaults(func=export_cmd)
+
+    neva = sub.add_parser(
+        "neva-crawl",
+        help=(
+            "Crawl a NeVA (National e-Vidhan Application) state assembly portal. "
+            "Fetches questions, members, and papers to be laid."
+        ),
+    )
+    neva.add_argument("--portal", required=True, help="Portal subdomain, e.g. 'gujarat'")
+    neva.add_argument("--state-code", required=True, help="CMS two-letter code, e.g. 'GJ'")
+    neva.add_argument("--assemblies", required=True, help="Comma-separated assembly numbers, e.g. '15' or '14,15'")
+    neva.add_argument("--out", required=True, help="Output directory")
+    neva.add_argument("--sleep", type=float, default=0.5, help="Seconds between requests (default 0.5)")
+    neva.add_argument("--no-download", action="store_true", help="Skip PDF downloads")
+    neva.add_argument("--no-member-details", action="store_true", help="Skip per-member detail page fetches")
+    neva.add_argument("--sessions-limit", type=int, help="Smoke-test: stop after N sessions per assembly")
+    neva.set_defaults(func=neva_crawl_cmd)
 
     return parser
 

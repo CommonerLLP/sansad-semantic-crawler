@@ -25,7 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
 ]
-dependencies = ["commoner-probe>=0.5.1"]
+dependencies = ["commoner-probe>=0.7.0"]
 
 [project.optional-dependencies]
 pdf = ["pdfminer.six>=20231228"]

@@ -117,8 +117,8 @@ class LoadEntitiesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
             _write_jsonl(out / "entities" / "people.jsonl", [
-                {"entity_id": "e1", "name": "D. Ravikumar", "party": "VCK",
-                 "state": "Tamil Nadu", "house": "ls"},
+                {"entity_id": "e1", "name": "Test MP", "party": "Test Party",
+                 "state": "Test State", "house": "ls"},
             ])
             conn = sqlite3.connect(str(out / "g.db"))
             init_db(conn)
@@ -127,7 +127,7 @@ class LoadEntitiesTests(unittest.TestCase):
             row = conn.execute("SELECT * FROM entities WHERE entity_id='e1'").fetchone()
             conn.close()
             self.assertEqual(count, 1)
-            self.assertEqual(row[1], "D. Ravikumar")
+            self.assertEqual(row[1], "Test MP")
 
     def test_missing_file_returns_zero(self):
         with tempfile.TemporaryDirectory() as tmp:

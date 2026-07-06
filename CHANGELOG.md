@@ -11,6 +11,15 @@ researchers who pin a tag and want to know what they are pinning to.
 
 ## [Unreleased]
 
+### Changed
+
+- **NeVA state-assembly acquisition delegated to `commoner-probe`
+  (`commoner-probe>=0.7.0` required).** `commoner_probe.neva.StateAssemblyCrawler`
+  is now the single source of truth for NeVA acquisition (questions, unlisted
+  questions, members, papers laid); `neva.py`'s local re-implementation has
+  been removed in favor of a thin compatibility wrapper (`NevaStateCrawler`),
+  matching the pattern already used for Sansad Q&A and committee acquisition.
+
 ## [2.0.0] — 2026-06-25
 
 ### Changed
