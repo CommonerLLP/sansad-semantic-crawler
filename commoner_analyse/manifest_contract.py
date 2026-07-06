@@ -18,7 +18,7 @@ def acquisition_source_for(record: Mapping[str, Any]) -> str:
     if record.get("probed_at"):
         return "commoner-probe"
     if record.get("crawled_at"):
-        return "sansad-semantic-crawler"
+        return "commoner-analyse"
     return "unknown"
 
 

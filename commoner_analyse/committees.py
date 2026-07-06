@@ -13,7 +13,7 @@ append time and aliases ``probed_at`` to ``crawled_at``, and ``_ClassifierRunLog
 records the classifier mode/config on each run. The report-type/key helpers and
 committee catalogs (``_report_type``, ``report_key``, ``resolve_committees``,
 ``LS_COMMITTEES`` …) are re-exported from commoner-probe so existing
-``from sansad_semantic_crawler.committees import ...`` callers keep working
+``from commoner_analyse.committees import ...`` callers keep working
 unchanged.
 """
 
@@ -48,7 +48,7 @@ from ._probe_compat import with_crawled_at as _with_crawled_at
 from .topics import TopicProfile
 
 # Public surface: the wrapper plus the report helpers/catalogs re-exported from
-# commoner-probe so existing ``from sansad_semantic_crawler.committees import``
+# commoner-probe so existing ``from commoner_analyse.committees import``
 # callers (cli, tests, sister projects) keep working.
 __all__ = [
     "CommitteeCrawler",

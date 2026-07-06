@@ -3,12 +3,12 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from sansad_semantic_crawler.classifiers import build_classifier
-from sansad_semantic_crawler.classifiers.embeddings import EmbeddingsClassifier
-from sansad_semantic_crawler.classifiers.ensemble import EnsembleClassifier
-from sansad_semantic_crawler.classifiers.llm import LLMClassifier
-from sansad_semantic_crawler.classifiers.regex import RegexClassifier, build_tag_rules
-from sansad_semantic_crawler.topics import load_topic
+from commoner_analyse.classifiers import build_classifier
+from commoner_analyse.classifiers.embeddings import EmbeddingsClassifier
+from commoner_analyse.classifiers.ensemble import EnsembleClassifier
+from commoner_analyse.classifiers.llm import LLMClassifier
+from commoner_analyse.classifiers.regex import RegexClassifier, build_tag_rules
+from commoner_analyse.topics import load_topic
 
 
 class ClassifierTests(unittest.TestCase):

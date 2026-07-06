@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import unittest
 
-from sansad_semantic_crawler.committees import (
+from commoner_analyse.committees import (
     REPORT_TYPE_ACTION_TAKEN,
     REPORT_TYPE_BILL,
     REPORT_TYPE_DFG,

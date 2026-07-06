@@ -1,8 +1,8 @@
 from pathlib import Path
 import unittest
 
-from sansad_semantic_crawler.sansad import stable_key
-from sansad_semantic_crawler.topics import load_topic
+from commoner_analyse.sansad import stable_key
+from commoner_analyse.topics import load_topic
 
 
 ROOT = Path(__file__).resolve().parents[1]

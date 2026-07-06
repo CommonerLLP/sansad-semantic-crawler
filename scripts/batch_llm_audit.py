@@ -4,8 +4,8 @@ from pathlib import Path
 from collections import Counter
 
 # Add crawler to path
-sys.path.append("CommonerLLP/sansad-semantic-crawler")
-from sansad_semantic_crawler.discourse import classify_response_llm, DiscourseClassification, _now
+sys.path.append("CommonerLLP/commoner-analyse")
+from commoner_analyse.discourse import classify_response_llm, DiscourseClassification, _now
 
 def run_batch_llm(out_dir, batch_size=20):
     out_dir = Path(out_dir)

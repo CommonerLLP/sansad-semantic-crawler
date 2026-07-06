@@ -365,7 +365,7 @@ def neva_crawl_cmd(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sansad-semantic-crawler")
+    parser = argparse.ArgumentParser(prog="commoner-analyse")
     sub = parser.add_subparsers(dest="command", required=True)
 
     crawl = sub.add_parser("crawl")

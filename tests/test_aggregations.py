@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.aggregations import (
+from commoner_analyse.aggregations import (
     AGGREGATION_VERSION,
     write_ministry_summary,
     write_mp_summary,

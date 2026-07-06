@@ -81,7 +81,7 @@ def deprecation_message(command_name: str, args: argparse.Namespace) -> str:
     if detail:
         detail = "\n" + detail
     return (
-        f"warning: sansad-crawl {command_name} is a deprecated acquisition command.\n"
+        f"warning: commoner-analyse {command_name} is a deprecated acquisition command.\n"
         f"new acquisition belongs to commoner-probe:\n  {replacement}\n"
         f"the local compatibility crawler will still run in this release to preserve "
         f"existing manifest contracts.{detail}"

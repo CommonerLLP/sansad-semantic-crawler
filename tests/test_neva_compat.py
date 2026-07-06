@@ -11,7 +11,7 @@ from types import ModuleType
 
 
 REAL_IMPORT_MODULE = importlib.import_module
-TARGET_MODULE = "sansad_semantic_crawler.neva"
+TARGET_MODULE = "commoner_analyse.neva"
 
 
 @contextmanager
@@ -23,7 +23,7 @@ def reloaded_neva(probe_class: type) -> Iterator[ModuleType]:
     module so ``NevaStateCrawler`` subclasses the fake.
     """
     original = sys.modules.pop(TARGET_MODULE, None)
-    package = sys.modules.get("sansad_semantic_crawler")
+    package = sys.modules.get("commoner_analyse")
     old_attr = getattr(package, "neva", None) if package is not None else None
     if package is not None and hasattr(package, "neva"):
         delattr(package, "neva")

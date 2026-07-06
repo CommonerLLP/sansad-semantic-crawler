@@ -3,12 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.manifest_contract import (
+from commoner_analyse.manifest_contract import (
     iter_manifest_records,
     normalize_manifest_record,
 )
-from sansad_semantic_crawler.textparse import parse_corpus
-from sansad_semantic_crawler.topics import load_topic
+from commoner_analyse.textparse import parse_corpus
+from commoner_analyse.topics import load_topic
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,7 +85,7 @@ class ManifestContractTests(unittest.TestCase):
     def test_old_local_manifest_row_keeps_semantic_fields_and_crawl_contract(self):
         row = normalize_manifest_record(_old_local_row(), acquisition_log="crawl.log")
 
-        self.assertEqual(row["acquisition_source"], "sansad-semantic-crawler")
+        self.assertEqual(row["acquisition_source"], "commoner-analyse")
         self.assertEqual(row["acquired_at"], "2026-06-01T10:00:00")
         self.assertEqual(row["acquisition_log"], "crawl.log")
         self.assertEqual(row["tags"], ["legacy_tag"])
@@ -120,7 +120,7 @@ class ManifestContractTests(unittest.TestCase):
 
         self.assertEqual(len(parsed), 1)
         row = parsed[0]
-        self.assertEqual(row["acquisition_source"], "sansad-semantic-crawler")
+        self.assertEqual(row["acquisition_source"], "commoner-analyse")
         self.assertEqual(row["acquired_at"], "2026-06-01T10:00:00")
         self.assertEqual(row["acquisition_log"], "crawl.log")
         self.assertEqual(row["classifier"], "regex")

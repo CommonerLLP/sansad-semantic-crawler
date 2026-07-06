@@ -1,22 +1,36 @@
 # Changelog
 
-All notable changes to `sansad-semantic-crawler` are recorded here. The
+All notable changes to `commoner-analyse` are recorded here. The
 format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 The full GitHub release notes live at
-<https://github.com/CommonerLLP/sansad-semantic-crawler/releases>; this file
+<https://github.com/CommonerLLP/commoner-analyse/releases>; this file
 is the single canonical timeline for `requirements.txt` consumers and for
 researchers who pin a tag and want to know what they are pinning to.
 
 ## [Unreleased]
+
+## [0.1.0] — 2026-07-06
+
+**Identity migration — `sansad-semantic-crawler` is now `commoner-analyse`.**
+This is a fresh version identity, not a continuation of the `2.0.0` line: the
+repo's actual role has been domain analysis over commoner-probe's acquired
+records since acquisition delegation began, and the name now reflects that —
+this package is the adapter layer for analysing everything `commoner-probe`
+acquires (Sansad Q&A, committees, NeVA state assemblies, bills, debates, and
+more as commoner-probe's acquisition surface grows), not a Sansad-specific
+tool. Package name, import path (`sansad_semantic_crawler` → `commoner_analyse`),
+CLI entry point (`sansad-crawl` → `commoner-analyse`), and repository URL all
+changed together in this release. No compatibility shim for the old name is
+provided — pin `commoner-analyse` going forward.
 
 ### Changed
 
 - **NeVA state-assembly acquisition delegated to `commoner-probe`
   (`commoner-probe>=0.7.0` required).** `commoner_probe.neva.StateAssemblyCrawler`
   is now the single source of truth for NeVA acquisition (questions, unlisted
-  questions, members, papers laid); `neva.py`'s local re-implementation has
+  questions, members, papers laid); the local re-implementation has
   been removed in favor of a thin compatibility wrapper (`NevaStateCrawler`),
   matching the pattern already used for Sansad Q&A and committee acquisition.
 
@@ -29,7 +43,7 @@ researchers who pin a tag and want to know what they are pinning to.
   "zero required third-party dependencies" guarantee no longer holds: there is
   no stdlib-only crawl path. Question (LS/RS), committee-report,
   answer-extraction, and member-roster acquisition now live in `commoner-probe`
-  as the single source of truth; `sansad-semantic-crawler` keeps only its
+  as the single source of truth; `commoner-analyse` keeps only its
   semantic-classification layer. For questions that layer runs at acquisition
   time via the probe's `record_filter_fn` (new in commoner-probe 0.5.1), so
   `--max-records` and the per-run/per-bucket counts reflect topic-matching rows.
@@ -469,7 +483,7 @@ between `discourse.py` and `classifiers/llm.py`, hand-pinned
   PDF download was silently failing with `URL can't contain control
   characters`. Adds `_encode_url_path` helper that percent-encodes
   path/query while staying idempotent on already-encoded URLs.
-- **`sansad_semantic_crawler.__version__` returns `'0.6.0'`.** Was
+- **`commoner_analyse.__version__` returns `'0.6.0'`.** Was
   reporting `'0.2.0'` since the 0.3.0 release — the constant in
   `__init__.py` was never bumped.
 
@@ -614,29 +628,29 @@ between `discourse.py` and `classifiers/llm.py`, hand-pinned
 - `manifest.jsonl` and `analysis.jsonl` canonical schemas.
 - Resume-safe crawling via per-record stable keys.
 
-[Unreleased]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/compare/v1.1.0...v2.0.0
-[1.1.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v1.1.0
-[1.0.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v1.0.0
-[0.6.6]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.6
-[0.6.5]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.5
-[0.6.4]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.4
-[0.6.3]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.3
-[0.6.2]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.2
-[0.6.1]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.1
-[0.6.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.6.0
-[0.5.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.5.0
-[0.4.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.4.0
-[0.3.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.3.0
-[0.2.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.2.0
-[0.1.0]: https://github.com/CommonerLLP/sansad-semantic-crawler/releases/tag/v0.1.0
+[Unreleased]: https://github.com/CommonerLLP/commoner-analyse/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/CommonerLLP/commoner-analyse/compare/v1.1.0...v2.0.0
+[1.1.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v1.1.0
+[1.0.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v1.0.0
+[0.6.6]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.6
+[0.6.5]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.5
+[0.6.4]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.4
+[0.6.3]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.3
+[0.6.2]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.2
+[0.6.1]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.1
+[0.6.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.6.0
+[0.5.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.5.0
+[0.4.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.4.0
+[0.3.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.3.0
+[0.2.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.2.0
+[0.1.0]: https://github.com/CommonerLLP/commoner-analyse/releases/tag/v0.1.0
 
-[#14]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/14
-[#15]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/15
-[#16]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/16
-[#17]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/17
-[#19]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/19
-[#21]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/21
-[#23]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/23
-[#25]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/25
-[#27]: https://github.com/CommonerLLP/sansad-semantic-crawler/pull/27
+[#14]: https://github.com/CommonerLLP/commoner-analyse/pull/14
+[#15]: https://github.com/CommonerLLP/commoner-analyse/pull/15
+[#16]: https://github.com/CommonerLLP/commoner-analyse/pull/16
+[#17]: https://github.com/CommonerLLP/commoner-analyse/pull/17
+[#19]: https://github.com/CommonerLLP/commoner-analyse/pull/19
+[#21]: https://github.com/CommonerLLP/commoner-analyse/pull/21
+[#23]: https://github.com/CommonerLLP/commoner-analyse/pull/23
+[#25]: https://github.com/CommonerLLP/commoner-analyse/pull/25
+[#27]: https://github.com/CommonerLLP/commoner-analyse/pull/27

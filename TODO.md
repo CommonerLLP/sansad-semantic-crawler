@@ -1,4 +1,4 @@
-# TODO — sansad-semantic-crawler
+# TODO — commoner-analyse
 
 ## Current
 
@@ -7,7 +7,6 @@
 - [ ] Import `notes/neva-bihar-citations.ris` into Zotero (File → Import)
 - [ ] Verify Bihar first session date (22 July 1937) + Ram Dayalu Singh as Speaker — primary source before op-ed publication
 - [ ] Search sansad.in written answers for NeVA year-wise expenditure by state
-- [ ] Pre-existing on origin/main (not introduced by the neva branch merge, 2026-07-06): `tests/test_sansad_record_filter_integration.py::test_rs_filter_drops_nonmatches_and_tags_kept_rows` and `::test_rs_max_records_caps_matching_rows_not_acquired_rows` fail — `_crawler.<locals>.<lambda>() got an unexpected keyword argument 'member_name'`. The test mocks `crawler.rs_search_session`, an attribute `sansad.py`'s `crawl_rs` no longer uses (it now fully delegates to `super().probe_rs(...)` from commoner-probe). CI has no commoner-probe version pin, so this is likely already red on trunk with commoner-probe>=0.7.0.
 
 ## Future
 

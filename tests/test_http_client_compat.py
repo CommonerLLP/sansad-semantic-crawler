@@ -12,7 +12,7 @@ from typing import Iterator
 
 
 REAL_IMPORT_MODULE = importlib.import_module
-TARGET_MODULE = "sansad_semantic_crawler.http_client"
+TARGET_MODULE = "commoner_analyse.http_client"
 
 
 @contextmanager
@@ -20,7 +20,7 @@ def reloaded_http_client(
     import_module: Callable[[str], ModuleType],
 ) -> Iterator[ModuleType]:
     original = sys.modules.pop(TARGET_MODULE, None)
-    package = sys.modules.get("sansad_semantic_crawler")
+    package = sys.modules.get("commoner_analyse")
     old_attr = getattr(package, "http_client", None) if package is not None else None
     if package is not None and hasattr(package, "http_client"):
         delattr(package, "http_client")

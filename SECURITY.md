@@ -6,14 +6,14 @@ Only the latest release on `main` receives security fixes.
 
 | Version | Supported |
 |---------|-----------|
-| 1.x (latest) | ✅ |
-| < 1.0 | ❌ |
+| 0.x (latest, `commoner-analyse`) | ✅ |
+| any `sansad-semantic-crawler` release | ❌ |
 
 ## Reporting a Vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report privately via GitHub's [Security Advisories](https://github.com/CommonerLLP/sansad-semantic-crawler/security/advisories/new) feature.
+Report privately via GitHub's [Security Advisories](https://github.com/CommonerLLP/commoner-analyse/security/advisories/new) feature.
 
 Include:
 - Description of the vulnerability
@@ -25,7 +25,7 @@ You will receive a response within 7 days. If the vulnerability is confirmed, a 
 
 ## Scope
 
-This package is a read-only crawler and analysis library. It makes outbound HTTP requests to `sansad.in` (Indian Parliament) and optionally to a local Ollama endpoint. It writes JSONL and SQLite files locally.
+This package is a read-only analysis library over records acquired by `commoner-probe`. It optionally makes outbound HTTP requests to a local Ollama endpoint for the LLM discourse tier. It writes JSONL and SQLite files locally.
 
 Known constraints:
 - The LLM tier (`--llm-endpoint`) accepts arbitrary URLs — callers are responsible for pointing it at trusted endpoints only

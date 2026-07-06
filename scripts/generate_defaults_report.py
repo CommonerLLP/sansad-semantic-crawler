@@ -24,4 +24,4 @@ def generate_defaults_report(data_dir, out_path):
             f.write('---\n\n')
 
 if __name__ == "__main__":
-    generate_defaults_report("CommonerLLP/sansad-semantic-crawler/data/atr-test", "CommonerLLP/notes/research/audits/reconstruction-recruitment-defaults.md")
+    generate_defaults_report("CommonerLLP/commoner-analyse/data/atr-test", "CommonerLLP/notes/research/audits/reconstruction-recruitment-defaults.md")

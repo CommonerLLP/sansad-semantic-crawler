@@ -14,8 +14,8 @@ import re
 import unittest
 import unittest.mock as mock
 
-from sansad_semantic_crawler.base import safe_filename_segment
-from sansad_semantic_crawler.discourse import (
+from commoner_analyse.base import safe_filename_segment
+from commoner_analyse.discourse import (
     CHANNEL_QA,
     DISCOURSE_LABEL_DESCRIPTIONS,
     LLM_CLASSIFIER_VERSION,
@@ -25,7 +25,7 @@ from sansad_semantic_crawler.discourse import (
     _validate_llm_endpoint,
     classify_response_llm,
 )
-from sansad_semantic_crawler.runlog import _is_secret_key, _redact
+from commoner_analyse.runlog import _is_secret_key, _redact
 
 
 # --------------------------------------------------------------------------- #
@@ -86,7 +86,7 @@ class EndpointValidationTests(unittest.TestCase):
         # If this raises, the hardened path can't reach any endpoint.
         fake_resolved = [(2, 1, 6, "", ("93.184.216.34", 0))]
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             return_value=fake_resolved,
         ):
             _validate_llm_endpoint(
@@ -106,7 +106,7 @@ class EndpointValidationTests(unittest.TestCase):
         # Mock getaddrinfo to return 10.0.0.5 for the hostname.
         fake_resolved = [(2, 1, 6, "", ("10.0.0.5", 0))]
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             return_value=fake_resolved,
         ):
             with self.assertRaises(ValueError) as cm:
@@ -121,7 +121,7 @@ class EndpointValidationTests(unittest.TestCase):
         target before this fix."""
         fake_resolved = [(2, 1, 6, "", ("169.254.169.254", 0))]
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             return_value=fake_resolved,
         ):
             with self.assertRaises(ValueError):
@@ -133,7 +133,7 @@ class EndpointValidationTests(unittest.TestCase):
     def test_hostname_resolving_to_public_ip_passes(self):
         fake_resolved = [(2, 1, 6, "", ("8.8.8.8", 0))]
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             return_value=fake_resolved,
         ):
             _validate_llm_endpoint(
@@ -149,7 +149,7 @@ class EndpointValidationTests(unittest.TestCase):
             (2, 1, 6, "", ("10.0.0.1", 0)),
         ]
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             return_value=fake_resolved,
         ):
             with self.assertRaises(ValueError):
@@ -162,7 +162,7 @@ class EndpointValidationTests(unittest.TestCase):
         falling through and letting urllib do it (where it would
         bypass our policy check)."""
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             side_effect=OSError("nodename nor servname provided"),
         ):
             with self.assertRaises(ValueError) as cm:
@@ -177,7 +177,7 @@ class EndpointValidationTests(unittest.TestCase):
         allow_private=False."""
         called = []
         original = __import__(
-            "sansad_semantic_crawler.discourse", fromlist=["socket"]
+            "commoner_analyse.discourse", fromlist=["socket"]
         ).socket.getaddrinfo
 
         def _track(*args, **kwargs):
@@ -185,7 +185,7 @@ class EndpointValidationTests(unittest.TestCase):
             return original(*args, **kwargs)
 
         with mock.patch(
-            "sansad_semantic_crawler.discourse.socket.getaddrinfo",
+            "commoner_analyse.discourse.socket.getaddrinfo",
             side_effect=_track,
         ):
             _validate_llm_endpoint(

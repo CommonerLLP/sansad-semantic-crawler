@@ -20,7 +20,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.dossier import (
+from commoner_analyse.dossier import (
     DOSSIER_VERSION,
     _name_matches,
     _normalize_topic_key,

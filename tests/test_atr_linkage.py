@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.atr_linkage import (
+from commoner_analyse.atr_linkage import (
     EXTRACTOR_VERSION,
     _compute_referenced_key,
     _extract_referenced_report_no,

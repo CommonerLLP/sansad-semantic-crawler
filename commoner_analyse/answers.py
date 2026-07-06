@@ -5,7 +5,7 @@ extraction logic. It now re-exports that implementation from
 ``commoner_probe.answers`` so the extraction code lives in exactly one place
 (the published ``commoner-probe`` package). The public surface (functions,
 dataclasses, the version constant, and the test-referenced parse helpers) is
-preserved so existing ``from sansad_semantic_crawler.answers import ...``
+preserved so existing ``from commoner_analyse.answers import ...``
 callers keep working unchanged.
 """
 

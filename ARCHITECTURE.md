@@ -1,8 +1,8 @@
 # Analysis architecture
 
-`sansad-semantic-crawler` separates three jobs:
+`commoner-analyse` separates three jobs:
 
-1. crawl Parliament question metadata and PDFs;
+1. consume Parliament question metadata and PDFs acquired by `commoner-probe`;
 2. extract text into one record-level text file;
 3. analyse each record through one or more semantic layers.
 
@@ -177,7 +177,7 @@ New profiles can add a classifier block:
 The CLI can override the profile for A/B runs:
 
 ```bash
-python -m sansad_semantic_crawler parse \
+python -m commoner_analyse parse \
   --topic examples/topics/libraries.json \
   --out data/libraries \
   --classifier regex
@@ -190,9 +190,9 @@ acquisition engine and single source of truth for crawling). Embeddings and
 LLM support are optional extras:
 
 ```bash
-pip install "sansad-semantic-crawler[embeddings]"
-pip install "sansad-semantic-crawler[llm]"
-pip install "sansad-semantic-crawler[all]"
+pip install "commoner-analyse[embeddings]"
+pip install "commoner-analyse[llm]"
+pip install "commoner-analyse[all]"
 ```
 
 Importing or running a mode without its extra raises a clear install hint.

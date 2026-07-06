@@ -1,7 +1,7 @@
 [project]
-name = "sansad-semantic-crawler"
-version = "2.0.0"
-description = "Config-driven semantic crawler for Indian Parliament (Lok Sabha + Rajya Sabha) questions."
+name = "commoner-analyse"
+version = "0.1.0"
+description = "Domain analysis adapters over commoner-probe's acquired public records: classification, aggregation, dossiers, and cross-referencing."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Commoner LLP" }]
@@ -12,7 +12,7 @@ keywords = [
   "rajya-sabha",
   "parliamentary-questions",
   "public-records",
-  "semantic-crawler",
+  "discourse-analysis",
   "civic-tech",
 ]
 classifiers = [
@@ -41,12 +41,12 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/CommonerLLP/sansad-semantic-crawler"
-Source = "https://github.com/CommonerLLP/sansad-semantic-crawler"
-Issues = "https://github.com/CommonerLLP/sansad-semantic-crawler/issues"
+Homepage = "https://github.com/CommonerLLP/commoner-analyse"
+Source = "https://github.com/CommonerLLP/commoner-analyse"
+Issues = "https://github.com/CommonerLLP/commoner-analyse/issues"
 
 [project.scripts]
-sansad-crawl = "sansad_semantic_crawler.cli:main"
+commoner-analyse = "commoner_analyse.cli:main"
 
 # Constrain setuptools auto-discovery so editable installs from a
 # working tree don't pick up sibling top-level dirs (`notes/`, `data/`,
@@ -54,7 +54,7 @@ sansad-crawl = "sansad_semantic_crawler.cli:main"
 # `git+https://` clone a gitignore-clean tree and weren't affected by
 # the discovery ambiguity, but local editable installs were.
 [tool.setuptools.packages.find]
-include = ["sansad_semantic_crawler*"]
+include = ["commoner_analyse*"]
 namespaces = false
 
 [tool.pytest.ini_options]

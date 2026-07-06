@@ -11,9 +11,9 @@ import re
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler import __version__
-from sansad_semantic_crawler.cli import build_parser
-from sansad_semantic_crawler.discourse import DISCOURSE_LABEL_DESCRIPTIONS
+from commoner_analyse import __version__
+from commoner_analyse.cli import build_parser
+from commoner_analyse.discourse import DISCOURSE_LABEL_DESCRIPTIONS
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -25,8 +25,8 @@ PYPROJECT = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 class VersionSyncTests(unittest.TestCase):
     def test_readme_install_lines_match_package_version(self):
         versions = re.findall(
-            r"sansad-semantic-crawler(?:\[[^]]+\])?\s*@\s*git\+https://github\.com/"
-            r"CommonerLLP/sansad-semantic-crawler\.git@v([0-9]+\.[0-9]+\.[0-9]+)",
+            r"commoner-analyse(?:\[[^]]+\])?\s*@\s*git\+https://github\.com/"
+            r"CommonerLLP/commoner-analyse\.git@v([0-9]+\.[0-9]+\.[0-9]+)",
             README,
         )
         self.assertTrue(versions)
@@ -50,7 +50,7 @@ class ReadmeCommandSyncTests(unittest.TestCase):
         subcommands = set(parser._subparsers._group_actions[0].choices.keys())  # type: ignore[attr-defined]
         commands = {
             match.group(1)
-            for match in re.finditer(r"^\s*sansad-crawl\s+([a-z0-9\-]+)\b", README, re.MULTILINE)
+            for match in re.finditer(r"^\s*commoner-analyse\s+([a-z0-9\-]+)\b", README, re.MULTILINE)
         }
         self.assertTrue(commands)
         self.assertTrue(commands.issubset(subcommands), sorted(commands - subcommands))

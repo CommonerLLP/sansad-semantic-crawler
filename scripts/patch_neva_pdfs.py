@@ -8,8 +8,8 @@ downloads the PDFs, and updates the records.
 import json
 import time
 from pathlib import Path
-from sansad_semantic_crawler.neva import NevaStateCrawler
-from sansad_semantic_crawler.base import safe_filename_segment
+from commoner_analyse.neva import NevaStateCrawler
+from commoner_analyse.base import safe_filename_segment
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = REPO_ROOT / "data" / "neva" / "gujarat"

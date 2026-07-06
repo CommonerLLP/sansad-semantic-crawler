@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sansad_semantic_crawler.committees import CommitteeCrawler
-from sansad_semantic_crawler.manifest_contract import iter_manifest_records
-from sansad_semantic_crawler.sansad import SansadCrawler
-from sansad_semantic_crawler.textparse import parse_corpus
+from commoner_analyse.committees import CommitteeCrawler
+from commoner_analyse.manifest_contract import iter_manifest_records
+from commoner_analyse.sansad import SansadCrawler
+from commoner_analyse.textparse import parse_corpus
 
 
 ROOT = Path(__file__).resolve().parents[1]

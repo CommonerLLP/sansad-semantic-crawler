@@ -66,4 +66,4 @@ def test_atr_analysis(out_dir):
         print("\n---\n")
 
 if __name__ == "__main__":
-    test_atr_analysis("CommonerLLP/sansad-semantic-crawler/data/atr-test")
+    test_atr_analysis("CommonerLLP/commoner-analyse/data/atr-test")

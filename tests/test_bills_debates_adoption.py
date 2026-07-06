@@ -16,14 +16,14 @@ import pytest
 pytest.importorskip("commoner_probe.bills")
 pytest.importorskip("commoner_probe.debates")
 
-from sansad_semantic_crawler.cli import build_parser  # noqa: E402
+from commoner_analyse.cli import build_parser  # noqa: E402
 
 
 def test_reexports_are_probe_symbols():
     import commoner_probe.bills as probe_bills
     import commoner_probe.debates as probe_debates
 
-    from sansad_semantic_crawler import bills, debates
+    from commoner_analyse import bills, debates
 
     # Re-export, not re-implementation: identical objects (single source of truth).
     assert bills.BillsProbe is probe_bills.BillsProbe
@@ -39,7 +39,7 @@ def test_cli_registers_new_subcommands():
 
 
 def test_crawl_bills_dry_run_emits_bill_record_without_writing(tmp_path):
-    from sansad_semantic_crawler.bills import BillsProbe
+    from commoner_analyse.bills import BillsProbe
 
     records = BillsProbe(tmp_path, sleep=0, houses=["ls", "rs"]).probe(dry_run=True)
 
@@ -62,7 +62,7 @@ def test_debate_probe_constructible_offline(tmp_path):
     # DebateProbe dry-run fetches the sitting-day catalog (not offline), and the probe's own
     # suite already covers its acquisition. Here we just pin that the re-export is a usable
     # class wired to the corpus dir — fully offline.
-    from sansad_semantic_crawler.debates import DebateProbe
+    from commoner_analyse.debates import DebateProbe
 
     probe = DebateProbe(tmp_path, sleep=0, loksabhas=[18])
     assert probe.loksabhas == [18]

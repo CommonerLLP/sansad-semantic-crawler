@@ -9,12 +9,13 @@ Run from the repository root.
 ## 1. Create a disposable environment
 
 ```bash
-python3 -m venv /private/tmp/ssc-integration-venv
-/private/tmp/ssc-integration-venv/bin/python -m pip install -e ".[embeddings,llm]"
+python3 -m venv /private/tmp/ca-integration-venv
+/private/tmp/ca-integration-venv/bin/python -m pip install -e ".[embeddings,llm]"
 ```
 
-The package itself has no required third-party dependencies. This venv is only
-for optional model integration tests.
+Beyond the required `commoner-probe` dependency, the package has no other
+required third-party dependencies. This venv is only for optional model
+integration tests.
 
 ## 2. Regex baseline
 
@@ -22,7 +23,7 @@ for optional model integration tests.
 rm -rf /private/tmp/ssc-smoke-regex
 cp -R examples/corpora/smoke /private/tmp/ssc-smoke-regex
 
-/private/tmp/ssc-integration-venv/bin/python -m sansad_semantic_crawler parse \
+/private/tmp/ca-integration-venv/bin/python -m commoner_analyse parse \
   --topic examples/topics/libraries.json \
   --out /private/tmp/ssc-smoke-regex \
   --refresh-text
@@ -36,7 +37,7 @@ Expected: `analysis.jsonl` has three rows with `"classifier": "regex"`.
 rm -rf /private/tmp/ssc-smoke-embeddings
 cp -R examples/corpora/smoke /private/tmp/ssc-smoke-embeddings
 
-/private/tmp/ssc-integration-venv/bin/python -m sansad_semantic_crawler parse \
+/private/tmp/ca-integration-venv/bin/python -m commoner_analyse parse \
   --topic examples/topics/libraries_embeddings.json \
   --out /private/tmp/ssc-smoke-embeddings \
   --refresh-text
@@ -72,7 +73,7 @@ Run the parser against Ollama's local chat-completions endpoint:
 rm -rf /private/tmp/ssc-smoke-ollama
 cp -R examples/corpora/smoke /private/tmp/ssc-smoke-ollama
 
-/private/tmp/ssc-integration-venv/bin/python -m sansad_semantic_crawler parse \
+/private/tmp/ca-integration-venv/bin/python -m commoner_analyse parse \
   --topic examples/topics/libraries_llm_ollama.json \
   --out /private/tmp/ssc-smoke-ollama \
   --refresh-text
@@ -106,12 +107,12 @@ To refresh the fixture after a confirmed upstream change:
 ```bash
 # 1. Pull the same two URLs again, overwriting the frozen raw files.
 curl -sS \
-  -H 'User-Agent: Mozilla/5.0 sansad-semantic-crawler' \
+  -H 'User-Agent: Mozilla/5.0 commoner-analyse' \
   'https://sansad.in/api_ls/committee/lsRSAllReports?house=L&committeeCode=12&lsNo=18&page=1&size=2&sortOn=reportNo&sortBy=desc' \
   -o examples/corpora/committees-smoke/raw/ls_finance_p1.json
 
 curl -sS \
-  -H 'User-Agent: Mozilla/5.0 sansad-semantic-crawler' \
+  -H 'User-Agent: Mozilla/5.0 commoner-analyse' \
   -H 'Referer: https://sansad.in/rs/committees' \
   'https://sansad.in/api_rs/committee/committee-reports?mstCommId=14&departmentId=&presentationYear=&search=&page=1&size=2&sortOn=reportNo&sortBy=desc&locale=en' \
   -o examples/corpora/committees-smoke/raw/rs_health_p1.json

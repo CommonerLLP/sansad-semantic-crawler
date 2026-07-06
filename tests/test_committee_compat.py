@@ -13,7 +13,7 @@ from typing import Any
 
 
 REAL_IMPORT_MODULE = importlib.import_module
-TARGET_MODULE = "sansad_semantic_crawler.committees"
+TARGET_MODULE = "commoner_analyse.committees"
 
 
 @contextmanager
@@ -26,7 +26,7 @@ def reloaded_committees(probe_class: type) -> Iterator[ModuleType]:
     continue to resolve from the real ``commoner_probe.committees`` module.
     """
     original = sys.modules.pop(TARGET_MODULE, None)
-    package = sys.modules.get("sansad_semantic_crawler")
+    package = sys.modules.get("commoner_analyse")
     old_attr = getattr(package, "committees", None) if package is not None else None
     if package is not None and hasattr(package, "committees"):
         delattr(package, "committees")

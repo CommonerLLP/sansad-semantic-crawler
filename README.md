@@ -1,18 +1,23 @@
-# Sansad Semantic Crawler
+# Commoner Analyse
 
-A self-contained, config-driven crawler for the Indian Parliament — questions
-in Lok Sabha and Rajya Sabha, and standing-committee reports — across
-topics. The package knows what to search for, what to tag, and what to keep — lives in JSON profiles,
-so other projects can add or extend subjects without editing crawler
-code. The tool's primary users are researchers building topic-specific corpora
-of parliamentary text. It is not a watchdog, a summariser, or a search engine.
+A config-driven domain-analysis layer over records that
+[`commoner-probe`](https://github.com/CommonerLLP/commoner-probe) acquires
+from the Indian Parliament and state legislatures — Lok Sabha and Rajya
+Sabha questions, standing-committee reports, and NeVA state-assembly
+records — across arbitrary topics. Acquisition is `commoner-probe`'s job;
+this package classifies, tags, aggregates, and cross-references what it
+acquires. Topic profiles (what to search for, what to tag, what to keep)
+live in JSON, so other projects can add or extend subjects without editing
+analysis code. The tool's primary users are researchers building
+topic-specific corpora of parliamentary text. It is not a watchdog, a
+summariser, or a search engine.
 
 
 ## What it does
 
-- Crawls Lok Sabha questions from `elibrary.sansad.in`.
-- Crawls Rajya Sabha questions from `rsdoc.nic.in`.
-- Crawls standing-committee reports from 16 LS DRSCs + 8 RS DRSCs.
+- Classifies Lok Sabha/Rajya Sabha questions and standing-committee reports
+  by topic, using records `commoner-probe` acquires from
+  `elibrary.sansad.in`, `rsdoc.nic.in`, and 16 LS DRSCs + 8 RS DRSCs.
 Offers the following analytical support:
 - **ATR Linkage Engine.** Automatically links Action Taken Reports back to
   original committee recommendations based on title citations, closing the
@@ -168,20 +173,20 @@ The package is not on PyPI yet (publication is planned for a future
 release). Install directly from the GitHub release tag:
 
 ```bash
-pip install "sansad-semantic-crawler @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "commoner-analyse @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
 
 # Optional extras (pick what you need):
-pip install "sansad-semantic-crawler[http] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
-pip install "sansad-semantic-crawler[pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
-pip install "sansad-semantic-crawler[embeddings] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
-pip install "sansad-semantic-crawler[llm] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
-pip install "sansad-semantic-crawler[all] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0"
+pip install "commoner-analyse[http] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
+pip install "commoner-analyse[pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
+pip install "commoner-analyse[embeddings] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
+pip install "commoner-analyse[llm] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
+pip install "commoner-analyse[all] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0"
 ```
 
 For a project, pin the same line in your `requirements.txt`:
 
 ```text
-sansad-semantic-crawler[http,pdf] @ git+https://github.com/CommonerLLP/sansad-semantic-crawler.git@v2.0.0
+commoner-analyse[http,pdf] @ git+https://github.com/CommonerLLP/commoner-analyse.git@v0.1.0
 ```
 
 The one required third-party dependency is `commoner-probe` — the
@@ -194,23 +199,23 @@ PDF extraction.
 
 ```bash
 # Core Pipeline
-sansad-crawl crawl             # Fetch metadata and PDFs
-sansad-crawl crawl-committees  # Crawl standing-committee reports
-sansad-crawl parse             # Topic classification -> analysis.jsonl
-sansad-crawl export            # Aggregate for sites
-sansad-crawl build-graph       # Ingest pipeline outputs into SQLite
+commoner-analyse crawl             # Fetch metadata and PDFs
+commoner-analyse crawl-committees  # Crawl standing-committee reports
+commoner-analyse parse             # Topic classification -> analysis.jsonl
+commoner-analyse export            # Aggregate for sites
+commoner-analyse build-graph       # Ingest pipeline outputs into SQLite
 
 # Response / audit pipeline
-sansad-crawl extract-answers      # Response extraction -> answers.jsonl
-sansad-crawl analyse-discourse    # Discourse + voice/agency -> analysis_discourse.jsonl
-sansad-crawl analyse-weights      # Per-person / per-party weights
+commoner-analyse extract-answers      # Response extraction -> answers.jsonl
+commoner-analyse analyse-discourse    # Discourse + voice/agency -> analysis_discourse.jsonl
+commoner-analyse analyse-weights      # Per-person / per-party weights
 
 # Research / audit subcommands
-sansad-crawl extract-atr-linkage  # Map ATRs to original reports
-sansad-crawl mp-dossier           # Generate MP-level briefing
-sansad-crawl ministry-dossier     # Generate Ministry audit report
-sansad-crawl analyse-ministry     # Aggregate evasion patterns
-sansad-crawl mp-summary           # Aggregate MP assertion rates
+commoner-analyse extract-atr-linkage  # Map ATRs to original reports
+commoner-analyse mp-dossier           # Generate MP-level briefing
+commoner-analyse ministry-dossier     # Generate Ministry audit report
+commoner-analyse analyse-ministry     # Aggregate evasion patterns
+commoner-analyse mp-summary           # Aggregate MP assertion rates
 ```
 
 ## Output layout

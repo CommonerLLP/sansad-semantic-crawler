@@ -36,7 +36,7 @@ class EmbeddingsClassifier(BaseClassifier):
             except ImportError as exc:
                 raise ImportError(
                     "Embeddings mode requires the optional extra: "
-                    "pip install 'sansad-semantic-crawler[embeddings]'"
+                    "pip install 'commoner-analyse[embeddings]'"
                 ) from exc
             kwargs = {} if self.device == "auto" else {"device": self.device}
             self._model = SentenceTransformer(self.embedding_model, **kwargs)

@@ -22,7 +22,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from sansad_semantic_crawler.discourse import (
+from commoner_analyse.discourse import (
     CHANNEL_QA,
     CHANNEL_COMMITTEE,
     DISCOURSE_LABEL_DESCRIPTIONS,

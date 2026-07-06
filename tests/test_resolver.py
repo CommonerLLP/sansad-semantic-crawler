@@ -17,13 +17,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.entities import (
+from commoner_analyse.entities import (
     EntityStore,
     MpMembership,
     Person,
     make_entity_id,
 )
-from sansad_semantic_crawler.resolver import Resolver
+from commoner_analyse.resolver import Resolver
 
 
 def _build_store(*, with_two_joshis: bool = False) -> EntityStore:

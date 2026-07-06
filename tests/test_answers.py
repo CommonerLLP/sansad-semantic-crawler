@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.answers import (
+from commoner_analyse.answers import (
     EXTRACTOR_VERSION,
     extract_answers,
     split_atr,
@@ -332,7 +332,7 @@ _REAL_DFG_PDF = Path(__file__).resolve().parents[1] / "test_v4_rs" / "pdfs" / "r
 @unittest.skipUnless(_REAL_DFG_PDF.exists(), f"real DFG PDF not available at {_REAL_DFG_PDF}")
 class RealPdfIntegrationTests(unittest.TestCase):
     def test_dfg_extraction_on_real_education_377(self):
-        from sansad_semantic_crawler.textparse import extract_pdf_text
+        from commoner_analyse.textparse import extract_pdf_text
         text = extract_pdf_text(_REAL_DFG_PDF)
         self.assertTrue(text)
         items = split_dfg(text)

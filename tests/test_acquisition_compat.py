@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from sansad_semantic_crawler.acquisition_compat import (
+from commoner_analyse.acquisition_compat import (
     build_commoner_probe_command,
     deprecation_message,
 )

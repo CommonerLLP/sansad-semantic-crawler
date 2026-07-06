@@ -23,7 +23,7 @@ USING_COMMONER_PROBE_HTTP = _commoner_http is not None
 USER_AGENT = getattr(
     _commoner_http,
     "USER_AGENT",
-    "sansad-semantic-crawler/1.1.0 (+https://github.com/CommonerLLP/sansad-semantic-crawler)",
+    "commoner-analyse/0.1.0 (+https://github.com/CommonerLLP/commoner-analyse)",
 )
 DEFAULT_RATE_LIMIT_SEC = getattr(_commoner_http, "DEFAULT_RATE_LIMIT_SEC", 1.0)
 

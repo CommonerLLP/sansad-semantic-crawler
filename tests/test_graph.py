@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.graph import (
+from commoner_analyse.graph import (
     _compute_state_hash,
     _get_meta_value,
     _load_atr_linkages,

@@ -22,7 +22,7 @@ have:
 * ``_ClassifierRunLog`` records the classifier mode/config on each run.
 
 The schema/key helpers (``stable_key`` etc.) are re-exported from commoner-probe
-so existing ``from sansad_semantic_crawler.sansad import ...`` callers keep
+so existing ``from commoner_analyse.sansad import ...`` callers keep
 working unchanged.
 """
 
@@ -45,7 +45,7 @@ from ._probe_compat import with_crawled_at as _with_crawled_at
 from .topics import TopicProfile
 
 # Public surface: the wrapper plus the acquisition helpers/constants re-exported
-# from commoner-probe so existing ``from sansad_semantic_crawler.sansad import``
+# from commoner-probe so existing ``from commoner_analyse.sansad import``
 # callers keep working.
 __all__ = [
     "SansadCrawler",

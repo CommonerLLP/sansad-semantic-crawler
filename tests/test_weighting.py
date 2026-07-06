@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sansad_semantic_crawler.weighting import (
+from commoner_analyse.weighting import (
     DEFAULT_SHRINKAGE_N0,
     WEIGHTING_VERSION,
     _ActorCounts,
