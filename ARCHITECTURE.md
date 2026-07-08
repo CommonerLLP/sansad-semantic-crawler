@@ -183,6 +183,15 @@ python -m commoner_analyse parse \
   --classifier regex
 ```
 
+## Shared LLM HTTP layer
+
+`llm_client.py` is the single implementation of SSRF-guarded endpoint
+validation, API-key resolution (`env:VAR_NAME` indirection), the
+Ollama-compatible `/chat/completions` POST, and tolerant JSON-from-LLM
+parsing. `discourse.py`'s LLM tier and `dossier.py`'s ministry-query
+refinement both call it — see `SECURITY.md` for the one classifier mode
+(`classifiers/llm.py`) that does not yet route through it.
+
 ## Dependency boundary
 
 The base install requires one third-party dependency, `commoner-probe` (the
