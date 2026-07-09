@@ -24,6 +24,10 @@ data-init:
 
 data-link:
 	@test -n "$(EXTERNAL)" || (echo "Usage: make data-link EXTERNAL=/path/to/external-drive"; exit 1)
+	@if [ -d data ] && [ ! -L data ]; then \
+		if [ -z "$$(ls -A data 2>/dev/null)" ]; then rm -rf data; \
+		else echo "data/ exists and is not empty — move or remove its contents before linking"; exit 1; fi; \
+	fi
 	mkdir -p $(EXTERNAL)/$(notdir $(CURDIR))/data
 	ln -sfn $(EXTERNAL)/$(notdir $(CURDIR))/data data
 
