@@ -31,7 +31,7 @@ dependencies = ["commoner-probe>=0.7.0"]
 pdf = ["pdfminer.six>=20231228"]
 http = ["requests>=2.31.0"]
 embeddings = ["numpy>=1.24", "sentence-transformers>=3.0", "torch>=2.0"]
-llm = []
+llm = ["langextract>=1.6"]
 all = [
   "numpy>=1.24",
   "pdfminer.six>=20231228",
