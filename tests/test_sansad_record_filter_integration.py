@@ -60,7 +60,7 @@ def _rs_row(qno: str, ans_text: str) -> dict:
 def _crawler(out_dir: Path, rows: list[dict]) -> SansadCrawler:
     crawler = SansadCrawler(_LibraryTopic(), out_dir, sleep=0, classifier_mode="contract")
     crawler.rs_search_session = (
-        lambda ses_no, ministry_like, member_name=None: rows
+        lambda ses_no, ministry_like, member_name=None, mp_code=None: rows
     )  # stub HTTP
     crawler._enrich_askers = lambda rec: None  # stub roster (network)
     return crawler
